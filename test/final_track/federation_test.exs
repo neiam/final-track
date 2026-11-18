@@ -59,6 +59,33 @@ defmodule FinalTrack.FederationTest do
     assert alt == "Cover of The Dark Side of the Moon by Pink Floyd"
   end
 
+  test "public accounts address everyone, with followers in cc", %{user: user, account: account} do
+    {:ok, _} = Federation.save_account(user, %{visibility: "public"})
+    play_fixture(user)
+
+    assert_received {:delivered, _, %{"object" => note} = create, _, _, _}
+    actor = FinalTrack.Federation.Objects.actor_url(account)
+    assert note["to"] == ["https://www.w3.org/ns/activitystreams#Public"]
+    assert note["cc"] == [actor <> "/followers"]
+    assert create["to"] == note["to"]
+  end
+
+  test "each post has its own url (Pixelfed drops posts that share one)", %{user: user} do
+    play_fixture(user, %{"timestamp" => System.os_time(:second) - 120})
+    play_fixture(user, %{"track" => "Money"})
+
+    assert_received {:delivered, _, %{"object" => %{"id" => id1, "url" => url1}}, _, _, _}
+    assert_received {:delivered, _, %{"object" => %{"id" => id2, "url" => url2}}, _, _, _}
+    assert url1 == id1
+    assert url2 == id2
+    refute url1 == url2
+  end
+
+  test "visibility must be one we know", %{user: user} do
+    assert {:error, cs} = Federation.save_account(user, %{visibility: "everyone"})
+    assert "is invalid" in errors_on(cs).visibility
+  end
+
   test "no cover, no attachment", %{user: user} do
     play_fixture(user)
     assert_received {:delivered, _, %{"object" => %{"attachment" => []}}, _, _, _}

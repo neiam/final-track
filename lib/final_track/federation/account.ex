@@ -7,12 +7,26 @@ defmodule FinalTrack.Federation.Account do
   use FinalTrack.Schema
   import Ecto.Changeset
 
+  @visibilities %{
+    "unlisted" => "Followers' feeds only",
+    "public" => "Public: also my profile page and public timelines"
+  }
+
+  @doc """
+  How posts can be addressed, with labels. Unlisted keeps them off public
+  timelines (and, on Pixelfed and angler, off the profile page as others
+  see it); public puts them everywhere.
+  """
+  def visibilities, do: @visibilities
+
   @reserved ~w(admin administrator root system support help info api www mail abuse
                postmaster webmaster security noreply instance relay inbox outbox)
 
   schema "fediverse_accounts" do
     field :username, :string
     field :enabled, :boolean, default: false
+    # "unlisted" or "public": see `visibilities/0`.
+    field :visibility, :string, default: "unlisted"
     field :public_key_pem, :string
     field :private_key_pem, :string, redact: true
 
@@ -30,7 +44,8 @@ defmodule FinalTrack.Federation.Account do
   @doc "The same checks without making keys: for a form as it's typed into."
   def validation_changeset(account, attrs) do
     account
-    |> cast(attrs, [:username, :enabled])
+    |> cast(attrs, [:username, :enabled, :visibility])
+    |> validate_inclusion(:visibility, Map.keys(@visibilities))
     |> update_change(
       :username,
       &(&1 |> String.trim() |> String.trim_leading("@") |> String.downcase())

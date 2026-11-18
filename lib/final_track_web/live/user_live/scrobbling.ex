@@ -250,10 +250,9 @@ defmodule FinalTrackWeb.UserLive.Scrobbling do
               <.icon name="hero-globe-alt-micro" class="size-4 text-accent" /> Fediverse
             </h2>
             <p class="mt-1 text-sm text-base-content/70">
-              Give your plays an account that Mastodon and other fediverse users can follow. While
-              it's on, every play you scrobble is posted (unlisted: to followers, not public
-              timelines) with its album cover. Private plays never are, and marking something private
-              withdraws what was already posted.
+              Give your plays an account that Mastodon, Pixelfed and other fediverse users can
+              follow. While it's on, every play you scrobble is posted with its album cover. Private
+              plays never are, and marking something private withdraws what was already posted.
             </p>
           </div>
 
@@ -271,6 +270,13 @@ defmodule FinalTrackWeb.UserLive.Scrobbling do
             ]}>
               {if @fediverse_account.enabled, do: "posting", else: "off"}
             </span>
+            <span
+              :if={@fediverse_account.enabled}
+              id="fediverse-visibility"
+              class="badge badge-sm badge-ghost"
+            >
+              {if @fediverse_account.visibility == "public", do: "public", else: "followers only"}
+            </span>
             <span class="text-base-content/60">
               {@fediverse_followers} {if @fediverse_followers == 1, do: "follower", else: "followers"} · {@fediverse_posts} {if @fediverse_posts ==
                                                                                                                                   1,
@@ -286,29 +292,46 @@ defmodule FinalTrackWeb.UserLive.Scrobbling do
             id="fediverse-form"
             phx-change="validate_fediverse"
             phx-submit="save_fediverse"
-            class="flex flex-col gap-3 sm:flex-row sm:items-end"
+            class="space-y-3"
           >
-            <div class="flex-1">
-              <.input
-                field={@fediverse_form[:username]}
-                type="text"
-                label="Username"
-                placeholder="e.g. alice"
-                autocomplete="off"
-                spellcheck="false"
-              />
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div class="flex-1">
+                <.input
+                  field={@fediverse_form[:username]}
+                  type="text"
+                  label="Username"
+                  placeholder="e.g. alice"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+              </div>
+              <div class="sm:flex-1">
+                <.input
+                  field={@fediverse_form[:visibility]}
+                  type="select"
+                  label="Who sees the posts"
+                  options={
+                    Enum.map(FinalTrack.Federation.Account.visibilities(), fn {v, l} -> {l, v} end)
+                  }
+                />
+              </div>
             </div>
-            <div class="sm:mb-3">
+            <p class="-mt-1 text-xs text-base-content/60">
+              Followers' feeds only keeps a post-per-play out of public timelines, but Pixelfed and
+              angler then don't show the posts on your profile page. Public shows them everywhere.
+              Changing it applies to new posts.
+            </p>
+            <div class="flex items-center justify-between gap-3">
               <.input field={@fediverse_form[:enabled]} type="checkbox" label="Post my plays" />
+              <button
+                id="save-fediverse"
+                type="submit"
+                class="btn btn-primary"
+                phx-disable-with="Saving…"
+              >
+                Save
+              </button>
             </div>
-            <button
-              id="save-fediverse"
-              type="submit"
-              class="btn btn-primary sm:mb-2"
-              phx-disable-with="Saving…"
-            >
-              Save
-            </button>
           </.form>
         </section>
 

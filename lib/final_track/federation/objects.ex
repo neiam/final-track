@@ -11,8 +11,9 @@ defmodule FinalTrack.Federation.Objects do
     * `/ap/inbox`                    the shared inbox
     * `/ap/notes/:id`                a posted play
 
-  Notes are unlisted (followers' timelines, not public ones): an account
-  posts every play, which would flood local and federated timelines.
+  Notes are unlisted by default (followers' timelines, not public ones): an
+  account posts every play, which would flood local and federated
+  timelines. An account can choose public instead (`Account.visibilities/0`).
   """
 
   alias FinalTrack.Accounts.User
@@ -108,12 +109,13 @@ defmodule FinalTrack.Federation.Objects do
       "type" => "Note",
       "attributedTo" => actor_url(account),
       "published" => DateTime.to_iso8601(s.played_at),
-      "to" => [followers_url(account)],
-      "cc" => [@public],
+      "to" => to(account),
+      "cc" => cc(account),
       "sensitive" => false,
       "content" => content(s),
-      # Where "open original" goes: the profile, which shows the play.
-      "url" => profile_url(account),
+      # Its own URL, unique per post: Pixelfed treats posts sharing a url as
+      # one and drops the rest. A browser following it lands on the profile.
+      "url" => url,
       "attachment" => cover_attachment(s.album, s.track)
     }
   end
@@ -170,11 +172,19 @@ defmodule FinalTrack.Federation.Objects do
       "id" => note_url(post) <> "#delete",
       "type" => "Delete",
       "actor" => actor_url(account),
-      "to" => [followers_url(account)],
-      "cc" => [@public],
+      "to" => to(account),
+      "cc" => cc(account),
       "object" => %{"id" => note_url(post), "type" => "Tombstone"}
     }
   end
+
+  # Public: to everyone, cc followers. Unlisted: to followers, cc everyone
+  # (delivered alike, kept off public timelines and others' profile views).
+  defp to(%Account{visibility: "public"}), do: [@public]
+  defp to(account), do: [followers_url(account)]
+
+  defp cc(%Account{visibility: "public"} = account), do: [followers_url(account)]
+  defp cc(_account), do: [@public]
 
   @doc "The `Accept` answering a `Follow`."
   def accept(follow, %Account{} = account) do

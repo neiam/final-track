@@ -21,6 +21,13 @@ defmodule FinalTrackWeb.UserLive.FediverseSettingsTest do
     assert has_element?(lv, "#fediverse-status", "@alice@localhost")
     assert has_element?(lv, "#fediverse-status", "posting")
 
+    # Followers only by default; public on request.
+    assert %{visibility: "unlisted"} = Federation.get_account(user)
+    assert has_element?(lv, "#fediverse-visibility", "followers only")
+    lv |> form("#fediverse-form", fediverse: %{visibility: "public"}) |> render_submit()
+    assert %{visibility: "public"} = Federation.get_account(user)
+    assert has_element?(lv, "#fediverse-visibility", "public")
+
     lv |> form("#fediverse-form", fediverse: %{enabled: "false"}) |> render_submit()
     assert %{enabled: false} = Federation.get_account(user)
     assert has_element?(lv, "#fediverse-status", "off")
