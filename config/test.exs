@@ -16,7 +16,8 @@ config :final_track, FinalTrack.Covers,
 config :final_track, FinalTrack.Federation,
   enabled: true,
   delivery: :inline,
-  post_delay_ms: 0
+  post_delay_ms: 0,
+  cover_waits: 0
 
 config :final_track, FinalTrack.Federation.HTTP,
   guard_addresses: false,

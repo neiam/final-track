@@ -26,11 +26,45 @@ defmodule FinalTrack.Covers.Fetcher do
   but the archive has no front cover, or another `{:error, reason}`.
   """
   def fetch(%Album{} = album) do
-    with {:ok, mbid} <- release_group(album.title, album.artist.name),
+    with {:ok, mbid} <- find_release_group(album.title, album.artist.name),
          {:ok, bytes} <- front_cover(mbid) do
       {:ok, %{bytes: bytes, mbid: mbid}}
     end
   end
+
+  # Players often put the whole credit in the artist field ("Justice & Tame
+  # Impala", "X feat. Y"), and MusicBrainz knows the album under the main
+  # artist. The full name goes first, so a duo whose name has an "&" in it
+  # (Simon & Garfunkel) is still found as itself.
+  defp find_release_group(title, artist) do
+    artist
+    |> artist_candidates()
+    |> Enum.with_index()
+    |> Enum.reduce_while({:error, :no_match}, fn {candidate, i}, _ ->
+      # Each extra search is another MusicBrainz request: keep to its pace.
+      if i > 0, do: Process.sleep(pause_ms())
+
+      case release_group(title, candidate) do
+        {:error, :no_match} = miss -> {:cont, miss}
+        other -> {:halt, other}
+      end
+    end)
+  end
+
+  @separators ~r/\s+(?:&|feat\.?|ft\.?|featuring|with|x|vs\.?|and)\s+|\s*[,;\/]\s*/iu
+
+  @doc """
+  The artist names worth searching for: the full credit, then its main
+  artist when the credit names several ("Justice & Tame Impala" → "Justice").
+  """
+  def artist_candidates(artist) do
+    main = @separators |> Regex.split(artist, parts: 2) |> hd() |> String.trim()
+    Enum.uniq(Enum.reject([artist, main], &(&1 == "")))
+  end
+
+  defp pause_ms,
+    do:
+      Application.get_env(:final_track, FinalTrack.Covers, []) |> Keyword.get(:interval_ms, 1100)
 
   @doc "The best MusicBrainz release-group id for an album, if any."
   def release_group(title, artist) do

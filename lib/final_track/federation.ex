@@ -178,12 +178,27 @@ defmodule FinalTrack.Federation do
   end
 
   # Built at send time: nil (nothing sent) if the play went private meanwhile.
-  defp create_for(post_id) do
+  # If the play's album is still waiting on its first cover lookup, give it
+  # a little longer: a post without its cover is a post Pixelfed drops (it
+  # doesn't store notes without media), and the cover is usually seconds
+  # away. Then it goes as it is.
+  defp create_for(post_id, waits \\ cover_waits()) do
     case get_post(post_id) do
-      {:ok, post} -> Objects.create(post, post.account)
-      _ -> nil
+      {:ok, %{scrobble: %{album: %{cover_key: nil, cover_checked_at: nil}}}} when waits > 0 ->
+        Process.sleep(cover_wait_ms())
+        create_for(post_id, waits - 1)
+
+      {:ok, post} ->
+        Objects.create(post, post.account)
+
+      _ ->
+        nil
     end
   end
+
+  # Up to 4 × 15s more, on top of post_delay_ms.
+  defp cover_waits, do: Keyword.get(config(), :cover_waits, 4)
+  defp cover_wait_ms, do: Keyword.get(config(), :cover_wait_ms, 15_000)
 
   @doc """
   A post that may be shown: its account on, its play not private.

@@ -31,6 +31,27 @@ defmodule FinalTrack.Covers do
 
   def maybe_fetch(_album), do: :ok
 
+  @doc """
+  Queues another lookup for every album that has no cover and never matched
+  on MusicBrainz (no `mbid`), e.g. after the lookup learned something new.
+  Returns how many were queued. From a release:
+
+      bin/final_track rpc 'IO.inspect(FinalTrack.Covers.retry_misses())'
+  """
+  def retry_misses do
+    import Ecto.Query, only: [from: 2]
+
+    ids =
+      from(a in Album,
+        where: is_nil(a.cover_key) and is_nil(a.mbid) and not is_nil(a.cover_checked_at),
+        select: a.id
+      )
+      |> FinalTrack.Repo.all()
+
+    Enum.each(ids, &Queue.enqueue/1)
+    length(ids)
+  end
+
   @doc "Queues a lookup for `album` now, whatever it has (a person asked for it)."
   def request_fetch(%Album{id: id}), do: Queue.enqueue(id)
 

@@ -51,6 +51,9 @@ if config_env() == :prod do
   config :final_track, FinalTrack.Covers,
     root: System.get_env("FINAL_TRACK_COVERS_DIR", "/var/lib/final_track/covers"),
     auto_fetch: System.get_env("FINAL_TRACK_AUTO_FETCH_COVERS", "true") == "true",
+    # Between MusicBrainz requests, per pod. MusicBrainz allows ~1/s per IP
+    # and every replica runs its own queue: 2.2s keeps two pods under it.
+    interval_ms: String.to_integer(System.get_env("FINAL_TRACK_COVER_INTERVAL_MS", "2200")),
     user_agent:
       System.get_env(
         "FINAL_TRACK_MUSICBRAINZ_USER_AGENT",

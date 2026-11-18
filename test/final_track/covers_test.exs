@@ -88,6 +88,80 @@ defmodule FinalTrack.CoversTest do
     assert_receive {:cover_fetch_failed, ^other_id, :unavailable}
   end
 
+  test "artist candidates: the full credit, then its main artist" do
+    alias FinalTrack.Covers.Fetcher
+
+    assert Fetcher.artist_candidates("Justice & Tame Impala") == [
+             "Justice & Tame Impala",
+             "Justice"
+           ]
+
+    assert Fetcher.artist_candidates("Daft Punk feat. Pharrell Williams") == [
+             "Daft Punk feat. Pharrell Williams",
+             "Daft Punk"
+           ]
+
+    assert Fetcher.artist_candidates("Calvin Harris ft Rihanna") == [
+             "Calvin Harris ft Rihanna",
+             "Calvin Harris"
+           ]
+
+    assert Fetcher.artist_candidates("Skrillex, Fred again..") == [
+             "Skrillex, Fred again..",
+             "Skrillex"
+           ]
+
+    assert Fetcher.artist_candidates("Disclosure x Kehlani") == [
+             "Disclosure x Kehlani",
+             "Disclosure"
+           ]
+
+    assert Fetcher.artist_candidates("Pink Floyd") == ["Pink Floyd"]
+    # Names that merely contain an x or an "and" aren't split.
+    assert Fetcher.artist_candidates("Charli XCX") == ["Charli XCX"]
+    assert Fetcher.artist_candidates("Andrew Bird") == ["Andrew Bird"]
+  end
+
+  test "fetch: a collaboration credit falls back to the main artist" do
+    test = self()
+    artist = Catalog.ensure_artist!("Justice & Tame Impala")
+    album = artist |> Catalog.ensure_album!("Hyperdrama") |> Map.put(:artist, artist)
+
+    stub(
+      fn conn ->
+        query = conn.query_params["query"]
+        send(test, {:searched, query})
+
+        if query =~ ~s(artist:"Justice"),
+          do: found().(conn),
+          else: Req.Test.json(conn, %{"release-groups" => []})
+      end,
+      &Plug.Conn.send_resp(&1, 200, png_bytes())
+    )
+
+    assert {:ok, %{cover_source: "coverartarchive"}} = Covers.fetch_cover_now(album.id)
+    assert_received {:searched, ~s(releasegroup:"Hyperdrama" AND artist:"Justice & Tame Impala")}
+    assert_received {:searched, ~s(releasegroup:"Hyperdrama" AND artist:"Justice")}
+  end
+
+  test "fetch: a duo with & in its name is found as itself, without a second search" do
+    test = self()
+    artist = Catalog.ensure_artist!("Simon & Garfunkel")
+    album = artist |> Catalog.ensure_album!("Bookends") |> Map.put(:artist, artist)
+
+    stub(
+      fn conn ->
+        send(test, {:searched, conn.query_params["query"]})
+        found().(conn)
+      end,
+      &Plug.Conn.send_resp(&1, 200, png_bytes())
+    )
+
+    assert {:ok, _} = Covers.fetch_cover_now(album.id)
+    assert_received {:searched, ~s(releasegroup:"Bookends" AND artist:"Simon & Garfunkel")}
+    refute_received {:searched, _}
+  end
+
   test "fetch: a weak MusicBrainz match is no match", %{album: album} do
     stub(found(60), &Plug.Conn.send_resp(&1, 200, png_bytes()))
     assert {:error, :no_match} = Covers.fetch_cover_now(album.id)
@@ -118,6 +192,22 @@ defmodule FinalTrack.CoversTest do
     assert {:ok, removed} = Covers.remove(second)
     assert removed.cover_key == nil
     assert {:error, :not_found} = Store.fetch(second.cover_key)
+  end
+
+  test "retry_misses/0 counts the albums that never matched", %{album: album} do
+    {:ok, _} = Catalog.mark_cover_checked(album)
+    other = Catalog.ensure_album!(album.artist, "Meddle")
+    {:ok, _} = Catalog.mark_cover_checked(other, %{mbid: "known-but-no-art"})
+
+    # Only the first: the second matched, the archive just has no art.
+    stub(&Req.Test.json(&1, %{"release-groups" => []}), &Plug.Conn.send_resp(&1, 404, ""))
+    # The queue is global: let it use this test's stub (made first) and DB.
+    queue = Process.whereis(FinalTrack.Covers.Queue)
+    Ecto.Adapters.SQL.Sandbox.allow(FinalTrack.Repo, self(), queue)
+    Req.Test.allow(FinalTrack.Covers.Fetcher, self(), queue)
+    assert Covers.retry_misses() == 1
+    album_id = album.id
+    assert_receive {:cover_fetch_failed, ^album_id, :no_match}
   end
 
   test "maybe_fetch/1 only queues what was never tried, and only when enabled", %{album: album} do
