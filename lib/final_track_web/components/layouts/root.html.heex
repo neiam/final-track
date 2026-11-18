@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html
+  lang="en"
+  data-system-light={FinalTrack.Themes.system_light()}
+  data-system-dark={FinalTrack.Themes.system_dark()}
+  data-theme={assigns[:forced_theme]}
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title default="FinalTrack" suffix=" · FinalTrack">
+      {assigns[:page_title]}
+    </.live_title>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+    <script>
+      (() => {
+        // Read off <html> rather than written here: HEEx does not
+        // interpolate inside a <script>, it emits the expression verbatim.
+        // FinalTrack.Themes is the one place the pair is named.
+        const root = document.documentElement;
+        const SYSTEM_DARK = root.dataset.systemDark;
+        const SYSTEM_LIGHT = root.dataset.systemLight;
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        const systemTheme = () => mq.matches ? SYSTEM_DARK : SYSTEM_LIGHT;
+        const setTheme = (theme) => {
+          if (theme === "system") {
+            localStorage.removeItem("phx:theme");
+            root.setAttribute("data-theme", systemTheme());
+          } else {
+            localStorage.setItem("phx:theme", theme);
+            root.setAttribute("data-theme", theme);
+          }
+        };
+        if (!root.hasAttribute("data-theme")) {
+          setTheme(localStorage.getItem("phx:theme") || "system");
+        }
+        mq.addEventListener("change", () => {
+          if (!localStorage.getItem("phx:theme")) setTheme("system");
+        });
+        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
+        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
+      })();
+    </script>
+  </head>
+  <body>
+    {@inner_content}
+  </body>
+</html>

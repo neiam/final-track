@@ -1,0 +1,24 @@
+#!/bin/sh
+# Create a registration invite and print its link.
+#   bin/invite [--email sam@example.com] [--note "for Sam"] [--days 7] [--by you@example.com]
+# Nothing is emailed: hand the link over. With --email, the link is for that
+# address only and signs them straight in (their email counted as confirmed).
+set -eu
+
+usage() { echo "usage: $0 [--email EMAIL] [--note TEXT] [--days N] [--by EMAIL]" >&2; exit 2; }
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --email) [ $# -ge 2 ] || usage; export INVITE_EMAIL="$2"; shift 2 ;;
+    --note) [ $# -ge 2 ] || usage; export INVITE_NOTE="$2"; shift 2 ;;
+    --days) [ $# -ge 2 ] || usage
+            case "$2" in ''|*[!0-9]*) usage ;; esac
+            export INVITE_DAYS="$2"; shift 2 ;;
+    --by)   [ $# -ge 2 ] || usage; export INVITE_BY="$2"; shift 2 ;;
+    -h|--help) usage ;;
+    *) usage ;;
+  esac
+done
+
+cd -P -- "$(dirname -- "$0")"
+exec ./final_track eval FinalTrack.Release.invite

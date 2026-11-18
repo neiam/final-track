@@ -1,0 +1,412 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+/* B612 + B612 Mono, self-hosted (see vendor/fonts.css). */
+@import "../vendor/fonts.css";
+
+@import "tailwindcss" source(none);
+@import "phoenix-colocated/final_track/colocated.css";
+@source "../css";
+@source "../js";
+@source "../../lib/final_track_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../_build/dev/phoenix-colocated/final_track/*/";
+
+/* B612 was drawn for aircraft cockpit displays: made to be read at a glance
+   under bad conditions, which is what chrome is for. Body copy stays on the
+   system stack, where long prose is more comfortable. */
+@theme {
+  --font-display: "B612", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Deliberately not inside @layer base: Tailwind drops user base layers that
+   nothing in the source references, and these are element selectors. */
+h1,
+h2,
+h3,
+h4,
+.navbar,
+.menu,
+.card-title,
+.tab,
+.btn {
+  font-family: var(--font-display);
+}
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by your mix.exs */
+@plugin "../vendor/heroicons";
+
+/* daisyUI Tailwind Plugin. */
+@plugin "daisyui/packages/bundle/daisyui" {
+  themes: false;
+}
+
+/* daisyUI theme plugin. Build your own at: https://daisyui.com/theme-generator/ */
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(30.33% 0.016 252.42);
+  --color-base-200: oklch(25.26% 0.014 253.1);
+  --color-base-300: oklch(20.15% 0.012 254.09);
+  --color-base-content: oklch(97.807% 0.029 256.847);
+  --color-primary: oklch(64% 0.076 19);
+  --color-primary-content: oklch(10% 0.010 19);
+  --color-secondary: oklch(58% 0.090 19);
+  --color-secondary-content: oklch(98% 0.010 19);
+  /* Dark rose, in the same hue family as primary/secondary (~15-19) rather
+     than the violet daisyUI ships. This is what `text-accent` paints: the
+     eyebrow over the headline, the feature icons and the step numbers. It
+     has to stay light enough to read against base-100 at 30% lightness, so
+     "dark rose" here is depth of hue and restraint of chroma, not a low
+     lightness -- a genuinely dark rose would be illegible on this ground.
+     Chroma sits above primary's 0.076 so an accent still reads as one.
+     The content colour follows primary, which is the same lightness. */
+  --color-accent: oklch(64% 0.135 15);
+  --color-accent-content: oklch(10% 0.012 15);
+  --color-neutral: oklch(37% 0.044 257.287);
+  --color-neutral-content: oklch(98% 0.003 247.858);
+  --color-info: oklch(58% 0.158 241.966);
+  --color-info-content: oklch(97% 0.013 236.62);
+  --color-success: oklch(60% 0.118 184.704);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1.5px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(98% 0.008 24);
+  --color-base-200: oklch(96% 0.014 24);
+  --color-base-300: oklch(92% 0.022 24);
+  --color-base-content: oklch(25% 0.050 24);
+  --color-primary: oklch(64% 0.076 19);
+  --color-primary-content: oklch(98% 0.010 19);
+  --color-secondary: oklch(55% 0.060 19);
+  --color-secondary-content: oklch(98% 0.010 19);
+  --color-accent: oklch(0% 0 0);
+  --color-accent-content: oklch(100% 0 0);
+  --color-neutral: oklch(44% 0.017 285.786);
+  --color-neutral-content: oklch(98% 0 0);
+  --color-info: oklch(62% 0.214 259.815);
+  --color-info-content: oklch(97% 0.014 254.604);
+  --color-success: oklch(70% 0.14 182.503);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1.5px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ── neiam-co themes ────────────────────────────────────────────────────────
+   Shared across the neiam Phoenix apps (clayman, diogramos, pin_flip). Six
+   dark pastel/jewel-tone palettes used as alternative looks alongside the
+   default light/dark pair. Names map 1:1 to FinalTrack.Themes. */
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "her";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(35% 0.104 24);
+  --color-base-200: oklch(30% 0.104 24);
+  --color-base-300: oklch(25% 0.104 24);
+  --color-base-content: oklch(98% 0.050 24);
+  --color-primary: oklch(64% 0.076 19);
+  --color-primary-content: oklch(10% 0.010 19);
+  --color-secondary: oklch(78% 0.049 18);
+  --color-secondary-content: oklch(10% 0.010 18);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(43% 0.103 22);
+  --color-neutral-content: oklch(98% 0.010 22);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "afterdark";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(29% 0.122 277);
+  --color-base-200: oklch(24% 0.122 277);
+  --color-base-300: oklch(19% 0.122 277);
+  --color-base-content: oklch(98% 0.050 277);
+  --color-primary: oklch(60% 0.090 285);
+  --color-primary-content: oklch(10% 0.010 285);
+  --color-secondary: oklch(76% 0.060 286);
+  --color-secondary-content: oklch(10% 0.010 286);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(38% 0.121 281);
+  --color-neutral-content: oklch(98% 0.010 281);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "forest";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(27% 0.063 153);
+  --color-base-200: oklch(22% 0.063 153);
+  --color-base-300: oklch(17% 0.063 153);
+  --color-base-content: oklch(98% 0.050 153);
+  --color-primary: oklch(80% 0.182 152);
+  --color-primary-content: oklch(10% 0.010 152);
+  --color-secondary: oklch(87% 0.136 154);
+  --color-secondary-content: oklch(10% 0.010 154);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(45% 0.108 151);
+  --color-neutral-content: oklch(98% 0.010 151);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "sky";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(29% 0.063 243);
+  --color-base-200: oklch(24% 0.063 243);
+  --color-base-300: oklch(19% 0.063 243);
+  --color-base-content: oklch(98% 0.050 243);
+  --color-primary: oklch(75% 0.139 233);
+  --color-primary-content: oklch(10% 0.010 233);
+  --color-secondary: oklch(83% 0.101 230);
+  --color-secondary-content: oklch(10% 0.010 230);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(39% 0.085 241);
+  --color-neutral-content: oklch(98% 0.010 241);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "clays";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(28% 0.074 46);
+  --color-base-200: oklch(23% 0.074 46);
+  --color-base-300: oklch(18% 0.074 46);
+  --color-base-content: oklch(98% 0.050 46);
+  --color-primary: oklch(67% 0.157 58);
+  --color-primary-content: oklch(10% 0.010 58);
+  --color-secondary: oklch(77% 0.165 70);
+  --color-secondary-content: oklch(10% 0.010 70);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(47% 0.125 46);
+  --color-neutral-content: oklch(98% 0.010 46);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "stones";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(27% 0.006 34);
+  --color-base-200: oklch(22% 0.006 34);
+  --color-base-300: oklch(17% 0.006 34);
+  --color-base-content: oklch(98% 0.050 34);
+  --color-primary: oklch(55% 0.023 264);
+  --color-primary-content: oklch(10% 0.010 264);
+  --color-secondary: oklch(71% 0.019 261);
+  --color-secondary-content: oklch(10% 0.010 261);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(44% 0.010 74);
+  --color-neutral-content: oklch(98% 0.010 74);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ── "blueprint" theme ──────────────────────────────────────────────────────
+   Deep navy + cyan paper-blueprint palette ported from diogramos. */
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "blueprint";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(28% 0.12 252);
+  --color-base-200: oklch(24% 0.11 252);
+  --color-base-300: oklch(20% 0.10 252);
+  --color-base-content: oklch(91% 0.05 235);
+  --color-primary: oklch(68% 0.18 248);
+  --color-primary-content: oklch(15% 0.05 248);
+  --color-secondary: oklch(82% 0.10 240);
+  --color-secondary-content: oklch(15% 0.05 240);
+  --color-accent: oklch(96% 0.058 96);
+  --color-accent-content: oklch(10% 0.010 96);
+  --color-neutral: oklch(40% 0.16 253);
+  --color-neutral-content: oklch(91% 0.05 235);
+  --color-info: oklch(83% 0.101 230);
+  --color-info-content: oklch(15% 0.05 230);
+  --color-success: oklch(90% 0.089 164);
+  --color-success-content: oklch(15% 0.05 164);
+  --color-warning: oklch(95% 0.124 102);
+  --color-warning-content: oklch(15% 0.05 102);
+  --color-error: oklch(81% 0.103 20);
+  --color-error-content: oklch(15% 0.05 20);
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+/* Use the data attribute for dark mode  */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* This file is for your main application CSS */
+
+/* A panel arriving. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A grid tile arriving (HomeLive): rises in and settles. */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

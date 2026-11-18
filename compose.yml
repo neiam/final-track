@@ -1,0 +1,17 @@
+services:
+  postgres:
+    restart: always
+    image: postgres:17.9
+    # Host ports in use by the sibling apps: 5433 neiam-htmx, 5434 bigtrippr,
+    # 5435 clayman, 54328 gitgud/waxx, 54329 diogramos/pin_flip. 54330 keeps
+    # this one clear of all of them.
+    ports:
+      - "54330:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=final_track_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+volumes:
+  pgdata: {}

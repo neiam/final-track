@@ -1,0 +1,71 @@
+/* B612 + B612 Mono, self-hosted. Vendored from @fontsource/b612 and
+   @fontsource/b612-mono 5.3.0 (latin subset, woff2 only); the font files
+   live in priv/static/fonts/{b612,b612-mono}/ with their SIL OFL 1.1
+   licence. Faces are only downloaded when something on the page uses them.
+   To update: `npm pack @fontsource/b612 @fontsource/b612-mono`, copy
+   files/*-latin-*.woff2 over the ones in priv/static/fonts/. */
+
+/* b612-latin-400-normal */
+@font-face {
+  font-family: "B612";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/fonts/b612/b612-latin-400-normal.woff2") format("woff2");
+}
+/* b612-latin-400-italic */
+@font-face {
+  font-family: "B612";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/fonts/b612/b612-latin-400-italic.woff2") format("woff2");
+}
+/* b612-latin-700-normal */
+@font-face {
+  font-family: "B612";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/fonts/b612/b612-latin-700-normal.woff2") format("woff2");
+}
+/* b612-latin-700-italic */
+@font-face {
+  font-family: "B612";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/fonts/b612/b612-latin-700-italic.woff2") format("woff2");
+}
+/* b612-mono-latin-400-normal */
+@font-face {
+  font-family: "B612 Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/fonts/b612-mono/b612-mono-latin-400-normal.woff2") format("woff2");
+}
+/* b612-mono-latin-400-italic */
+@font-face {
+  font-family: "B612 Mono";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/fonts/b612-mono/b612-mono-latin-400-italic.woff2") format("woff2");
+}
+/* b612-mono-latin-700-normal */
+@font-face {
+  font-family: "B612 Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/fonts/b612-mono/b612-mono-latin-700-normal.woff2") format("woff2");
+}
+/* b612-mono-latin-700-italic */
+@font-face {
+  font-family: "B612 Mono";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/fonts/b612-mono/b612-mono-latin-700-italic.woff2") format("woff2");
+}

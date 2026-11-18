@@ -1,0 +1,11 @@
+#!/bin/sh
+# Print a fresh link for the newest active invite addressed to EMAIL.
+# Earlier links to that invite stop working.
+#   bin/invite-link sam@example.com
+set -eu
+
+[ $# -eq 1 ] && [ -n "$1" ] || { echo "usage: $0 EMAIL" >&2; exit 2; }
+export INVITE_EMAIL="$1"
+
+cd -P -- "$(dirname -- "$0")"
+exec ./final_track eval FinalTrack.Release.invite_link
