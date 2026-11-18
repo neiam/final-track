@@ -1,0 +1,140 @@
+name: ci
+# Tests, then the release image to the public registries: GitHub (GHCR),
+# Docker Hub and Quay. As angler's ci.yml.
+#
+# GitHub only. The forge runs .forgejo/workflows/image.yml instead (it
+# ignores .github/workflows once .forgejo/workflows exists) and publishes to
+# its own registry, ggr.neiam.co, which the deployment pulls.
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+
+# A newer push supersedes this run: on a branch or PR the run in
+# progress is cancelled; on master it finishes, and only a run still
+# waiting is replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  test:
+    if: github.server_url == 'https://github.com'
+    # Self-hosted ARC runners, as angler. `ubuntu-latest` works too; the
+    # Postgres service needs a runner that supports service containers.
+    runs-on: arc-runner-set
+    env:
+      MIX_ENV: test
+      # The service's published port on the runner (config/test.exs
+      # defaults to 54330, compose.yml's).
+      POSTGRES_PORT: "5432"
+      # Below the service Postgres's 100 connections, however big the runner.
+      POOL_SIZE: "40"
+    services:
+      postgres:
+        image: docker.io/postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # ARC's default runner image is bare.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential git
+
+      # Our fork of erlef/setup-beam, mirrored to GitHub (as angler): it
+      # defaults ImageOS to ubuntu-24.04, which the ARC runner otherwise
+      # forces to something unmappable.
+      - uses: neiam/action-setup-beam@v1
+        with:
+          # Match the build image in the Dockerfile.
+          elixir-version: "1.20.5"
+          otp-version: "28.5.0.8"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - run: mix deps.get
+
+      # compile --warnings-as-errors, deps.unlock --unused, format, test.
+      - run: mix precommit
+
+  image:
+    if: github.server_url == 'https://github.com'
+    needs: test
+    runs-on: arc-runner-set
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      # GHCR takes the built-in GITHUB_TOKEN (`packages: write`, above).
+      # Docker Hub and Quay need repo secrets (Settings → Secrets and
+      # variables → Actions):
+      #   DOCKERHUB_USER / DOCKERHUB_TOKEN  (a Docker Hub access token)
+      #   QUAY_USERNAME / QUAY_TOKEN        (a Quay robot account)
+      # A missing login just fails the push to that registry; drop its login
+      # and `images` line to skip one.
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to Quay
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+            docker.io/neiam/final_track
+            quay.io/neiam/final_track
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Pull requests build (proving the Dockerfile still works) but don't push.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

@@ -41,7 +41,10 @@ config :final_track, FinalTrack.Repo,
   # parallel suite the default 50ms queue target made them give up.
   queue_target: 1_000,
   queue_interval: 5_000,
-  pool_size: System.schedulers_online() * 2,
+  # POOL_SIZE caps it (CI): big runners would otherwise open cores × 2
+  # connections and run out of the service Postgres's 100.
+  pool_size:
+    String.to_integer(System.get_env("POOL_SIZE") || "#{System.schedulers_online() * 2}"),
   # compose.yml's postgres by default; POSTGRES_PORT=5432 for the host's own.
   port: String.to_integer(System.get_env("POSTGRES_PORT") || "54330")
 

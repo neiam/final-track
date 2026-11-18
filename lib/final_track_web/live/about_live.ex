@@ -9,9 +9,13 @@ defmodule FinalTrackWeb.AboutLive do
   # {key, label, binary}: container runtimes for "Run your own".
   @runtimes [{:podman, "Podman", "podman"}, {:docker, "Docker", "docker"}]
 
-  # {key, label, image}: registries the image is published to. Add a row and
-  # the registry picker appears.
-  @registries [{:gitgud, "GitGud", "ggr.neiam.co/neiam/final_track"}]
+  # {key, label, image}: the public registries the image is published to
+  # (.github/workflows/ci.yml). The forge's own registry is private.
+  @registries [
+    {:ghcr, "GitHub", "ghcr.io/neiam/final_track"},
+    {:dockerhub, "Docker Hub", "docker.io/neiam/final_track"},
+    {:quay, "Quay", "quay.io/neiam/final_track"}
+  ]
 
   # {name, placeholder (and default), width class, label}: the blanks.
   @config_fields [
@@ -43,7 +47,7 @@ defmodule FinalTrackWeb.AboutLive do
      |> assign(:config_fields, @config_fields)
      |> assign(:optional_settings, @optional_settings)
      |> assign(:runtime, :podman)
-     |> assign(:registry, :gitgud)
+     |> assign(:registry, :ghcr)
      |> assign(:config_form, to_form(%{"user" => "", "password" => "", "host" => ""}))
      |> recompute_commands()}
   end
@@ -57,7 +61,7 @@ defmodule FinalTrackWeb.AboutLive do
   def handle_event("set_registry", %{"registry" => registry}, socket),
     do:
       {:noreply,
-       socket |> assign(:registry, pick(@registries, registry, :gitgud)) |> recompute_commands()}
+       socket |> assign(:registry, pick(@registries, registry, :ghcr)) |> recompute_commands()}
 
   def handle_event("set_config", params, socket) do
     form = to_form(Map.take(params, ["user", "password", "host"]))

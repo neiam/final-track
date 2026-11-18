@@ -40,12 +40,15 @@ defmodule FinalTrackWeb.AboutLiveTest do
       assert has_element?(lv, "#db-command", "POSTGRES_DB=final_track")
       assert has_element?(lv, "#run-command", "--network final-track")
       assert has_element?(lv, "#run-command", "ecto://USER:PASS@final-track-db/final_track")
-      assert has_element?(lv, "#run-command", "ggr.neiam.co/neiam/final_track:latest")
+      assert has_element?(lv, "#registry-ghcr[aria-selected=true]")
+      assert has_element?(lv, "#run-command", "ghcr.io/neiam/final_track:latest")
       assert has_element?(lv, "#run-command", "-v final-track-covers:/var/lib/final_track/covers")
       assert has_element?(lv, "#setup-command", "podman exec final-track bin/migrate")
       assert has_element?(lv, "#setup-command", "bin/invite")
-      # One registry so far: no picker.
-      refute has_element?(lv, "[id^=registry-]")
+      lv |> element("#registry-quay") |> render_click()
+      assert has_element?(lv, "#run-command", "quay.io/neiam/final_track:latest")
+      lv |> element("#registry-dockerhub") |> render_click()
+      assert has_element?(lv, "#run-command", "docker.io/neiam/final_track:latest")
     end
 
     test "switch runtime, fill in the blanks", %{conn: conn} do

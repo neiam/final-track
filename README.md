@@ -123,8 +123,14 @@ so scrobbling locally makes real requests to MusicBrainz.
 
 ## Running it
 
-The image is built by `.forgejo/workflows/image.yml` on every push to
-master: `ggr.neiam.co/neiam/final_track:{master,latest,sha-…}`. The release
+The forge builds `ggr.neiam.co/neiam/final_track:{master,latest,sha-…}`
+on every push to master (`.forgejo/workflows/image.yml`; the deployment
+pulls it). On GitHub, `.github/workflows/ci.yml` runs the tests and then
+publishes the same image publicly to `ghcr.io/neiam/final_track`,
+`docker.io/neiam/final_track` and `quay.io/neiam/final_track` (`latest`
+and `master` from master, versions from `v*` tags). Docker Hub and Quay
+need `DOCKERHUB_USER`/`DOCKERHUB_TOKEN` and `QUAY_USERNAME`/`QUAY_TOKEN`
+as repo secrets; GHCR uses the workflow's own token. The release
 (`mix release`) ships these scripts in `bin/`:
 
 | Script | |
