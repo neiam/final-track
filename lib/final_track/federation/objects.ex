@@ -29,6 +29,9 @@ defmodule FinalTrack.Federation.Objects do
 
   def instance_actor_url, do: base() <> "/ap/actor"
   def actor_url(%Account{username: username}), do: base() <> "/ap/users/" <> username
+
+  @doc "The account's profile page, Mastodon-style: `/@username`."
+  def profile_url(%Account{username: username}), do: base() <> "/@" <> username
   def key_id(%Account{} = account), do: actor_url(account) <> "#main-key"
   def followers_url(%Account{} = account), do: actor_url(account) <> "/followers"
   def note_url(%Post{id: id}), do: base() <> "/ap/notes/" <> id
@@ -72,7 +75,7 @@ defmodule FinalTrack.Federation.Objects do
       "name" => name,
       "summary" =>
         "<p>What #{escape(name)} is listening to, scrobbled to Final Track at #{escape(domain())}.</p>",
-      "url" => base() <> "/",
+      "url" => profile_url(account),
       "inbox" => url <> "/inbox",
       "outbox" => url <> "/outbox",
       "followers" => url <> "/followers",
@@ -109,7 +112,8 @@ defmodule FinalTrack.Federation.Objects do
       "cc" => [@public],
       "sensitive" => false,
       "content" => content(s),
-      "url" => url,
+      # Where "open original" goes: the profile, which shows the play.
+      "url" => profile_url(account),
       "attachment" => cover_attachment(s.album, s.track)
     }
   end
@@ -210,13 +214,13 @@ defmodule FinalTrack.Federation.Objects do
   def webfinger(%Account{} = account) do
     %{
       "subject" => "acct:#{account.username}@#{domain()}",
-      "aliases" => [actor_url(account)],
+      "aliases" => [actor_url(account), profile_url(account)],
       "links" => [
         %{"rel" => "self", "type" => "application/activity+json", "href" => actor_url(account)},
         %{
           "rel" => "http://webfinger.net/rel/profile-page",
           "type" => "text/html",
-          "href" => base() <> "/"
+          "href" => profile_url(account)
         }
       ]
     }

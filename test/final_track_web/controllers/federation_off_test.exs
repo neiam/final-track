@@ -32,7 +32,9 @@ defmodule FinalTrackWeb.FederationOffTest do
           "/nodeinfo/2.0",
           "/ap/actor",
           "/ap/users/alice",
-          "/ap/users/alice/outbox"
+          "/ap/users/alice/outbox",
+          "/.well-known/host-meta",
+          "/@alice"
         ] do
       assert response(get(conn, path), 404), path
     end

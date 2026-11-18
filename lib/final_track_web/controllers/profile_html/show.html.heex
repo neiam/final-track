@@ -1,0 +1,79 @@
+<Layouts.app flash={@flash} current_scope={@current_scope} wide>
+  <div class="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+    <header id="profile" class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex items-center gap-4">
+        <span class="flex size-16 shrink-0 items-center justify-center rounded-box bg-primary font-mono text-2xl font-bold text-primary-content shadow-md">
+          {@name |> String.first() |> String.upcase()}
+        </span>
+        <div class="min-w-0">
+          <h1 id="profile-name" class="truncate text-3xl font-bold tracking-tight">{@name}</h1>
+          <p
+            id="profile-handle"
+            class="truncate font-mono text-sm text-base-content/70 select-all"
+          >
+            {@handle}
+          </p>
+        </div>
+      </div>
+      <div class="text-sm text-base-content/70 sm:text-right">
+        <p>
+          <span id="profile-followers" class="font-mono">{@followers}</span>
+          {if @followers == 1, do: "follower", else: "followers"}
+        </p>
+        <p class="text-xs">
+          Follow by searching <span class="font-mono">{@handle}</span> on your server.
+        </p>
+      </div>
+    </header>
+
+    <section>
+      <h2 class="mb-3 flex items-center gap-2 font-semibold">
+        <.icon name="hero-musical-note-micro" class="size-4 text-accent" /> Lately
+      </h2>
+      <p
+        :if={@plays == []}
+        id="profile-empty"
+        class="rounded-box border border-dashed border-base-300 py-16 text-center text-base-content/60"
+      >
+        Nothing played yet.
+      </p>
+      <div
+        :if={@plays != []}
+        id="profile-plays"
+        class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+      >
+        <div
+          :for={play <- @plays}
+          id={"play-#{play.id}"}
+          class="group relative aspect-square overflow-hidden rounded-box border border-base-300 bg-base-300 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+        >
+          <div class="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
+            <.cover album={play.album} class="size-full rounded-none! border-0!" />
+          </div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+          <span class="absolute left-2 top-2 rounded-full bg-black/50 px-2 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur-sm">
+            {ago(play.played_at)}
+          </span>
+          <div class="absolute inset-x-0 bottom-0 p-3 text-white">
+            <p class="truncate text-sm font-semibold leading-tight drop-shadow">
+              {play.track.title}
+            </p>
+            <p class="truncate text-xs text-white/80">{play.track.artist.name}</p>
+            <p
+              :if={play.album}
+              class="max-h-0 truncate text-xs text-white/60 opacity-0 transition-all duration-300 group-hover:max-h-5 group-hover:opacity-100"
+            >
+              {play.album.title}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center">
+      <.link navigate={~p"/about"} class="text-xs text-base-content/60 hover:text-base-content">
+        What is Final Track?
+      </.link>
+    </footer>
+  </div>
+</Layouts.app>

@@ -6,7 +6,7 @@ defmodule FinalTrackWeb.FederationController do
 
   Actor and Note URLs are also what a person may click in their fediverse
   client; a browser (anything not asking for ActivityPub JSON) is sent to
-  the landing grid instead.
+  the account's `/@user` profile instead (`FinalTrackWeb.ProfileController`).
   """
   use FinalTrackWeb, :controller
 
@@ -16,26 +16,14 @@ defmodule FinalTrackWeb.FederationController do
 
   ## Discovery
 
-  def webfinger(conn, %{"resource" => resource}) do
-    domain = Objects.domain()
-
-    found =
-      case resource do
-        "acct:" <> acct ->
-          case String.split(acct, "@", parts: 2) do
-            [^domain, ^domain] -> Objects.instance_webfinger()
-            [user, ^domain] -> account_jrd(Federation.get_live_account(user))
-            _ -> nil
-          end
-
-        url ->
-          case String.split(url, Objects.base() <> "/ap/users/", parts: 2) do
-            ["", user] -> account_jrd(Federation.get_live_account(user))
-            _ -> nil
-          end
-      end
-
-    case found do
+  @doc """
+  WebFinger (RFC 7033). The resource may be `acct:user@host` (with or
+  without a leading `@` on the user, as people type handles), the account's
+  actor URL or its `/@user` profile URL, or `acct:host@host` for the
+  instance actor. Case-insensitive. Unknown or foreign resources are 404.
+  """
+  def webfinger(conn, %{"resource" => resource}) when is_binary(resource) do
+    case resolve(String.trim(resource)) do
       nil ->
         send_resp(conn, 404, "")
 
@@ -49,8 +37,61 @@ defmodule FinalTrackWeb.FederationController do
 
   def webfinger(conn, _params), do: send_resp(conn, 400, "")
 
+  defp resolve("acct:" <> acct) do
+    domain = String.downcase(Objects.domain())
+
+    case acct |> String.trim_leading("@") |> String.downcase() |> String.split("@", parts: 2) do
+      [^domain, ^domain] -> Objects.instance_webfinger()
+      [user, ^domain] -> account_jrd(Federation.get_live_account(user))
+      _ -> nil
+    end
+  end
+
+  defp resolve(url) do
+    base = String.downcase(Objects.base())
+
+    cond do
+      String.downcase(url) == String.downcase(Objects.instance_actor_url()) ->
+        Objects.instance_webfinger()
+
+      String.starts_with?(String.downcase(url), base <> "/ap/users/") ->
+        url |> String.slice(String.length(base <> "/ap/users/")..-1//1) |> account_by_path()
+
+      String.starts_with?(String.downcase(url), base <> "/@") ->
+        url |> String.slice(String.length(base <> "/@")..-1//1) |> account_by_path()
+
+      true ->
+        nil
+    end
+  end
+
+  defp account_by_path(rest) do
+    case String.split(rest, ["/", "?", "#"], parts: 2) do
+      [user | _] when user != "" -> account_jrd(Federation.get_live_account(user))
+      _ -> nil
+    end
+  end
+
   defp account_jrd(nil), do: nil
   defp account_jrd(account), do: Objects.webfinger(account)
+
+  @doc """
+  `/.well-known/host-meta` (RFC 6415): where WebFinger lives, for clients
+  that look here first.
+  """
+  def host_meta(conn, _params) do
+    xml = """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+      <Link rel="lrdd" template="#{Objects.base()}/.well-known/webfinger?resource={uri}"/>
+    </XRD>
+    """
+
+    conn
+    |> put_resp_content_type("application/xrd+xml")
+    |> put_resp_header("access-control-allow-origin", "*")
+    |> send_resp(200, xml)
+  end
 
   def nodeinfo_links(conn, _params), do: json(conn, Objects.nodeinfo_links())
 
@@ -68,7 +109,7 @@ defmodule FinalTrackWeb.FederationController do
     do: ap(conn, Objects.instance_actor(InstanceActor.ensure!()))
 
   def actor(conn, %{"username" => username}) do
-    with_account(conn, username, &ap(conn, Objects.person(&1)))
+    with_account(conn, username, &ap(conn, Objects.person(&1), Objects.profile_url(&1)))
   end
 
   def outbox(conn, %{"username" => username}) do
@@ -86,7 +127,7 @@ defmodule FinalTrackWeb.FederationController do
 
   def note(conn, %{"id" => id}) do
     case Federation.get_post(id) do
-      {:ok, post} -> ap(conn, Objects.note(post, post.account))
+      {:ok, post} -> ap(conn, Objects.note(post, post.account), Objects.profile_url(post.account))
       # Was posted, mayn't be shown now (made private, account off).
       {:error, :gone} -> send_resp(conn, 410, "")
       {:error, :not_found} -> send_resp(conn, 404, "")
@@ -100,13 +141,19 @@ defmodule FinalTrackWeb.FederationController do
     end
   end
 
-  defp ap(conn, doc) do
-    if wants_activity_json?(conn) do
-      conn
-      |> put_resp_content_type("application/activity+json")
-      |> send_resp(200, Jason.encode_to_iodata!(doc))
-    else
-      redirect(conn, to: ~p"/")
+  # A browser gets `html_to` (the account's profile, or the landing grid).
+  defp ap(conn, doc, html_to \\ nil) do
+    cond do
+      wants_activity_json?(conn) ->
+        conn
+        |> put_resp_content_type("application/activity+json")
+        |> send_resp(200, Jason.encode_to_iodata!(doc))
+
+      html_to ->
+        redirect(conn, external: html_to)
+
+      true ->
+        redirect(conn, to: ~p"/")
     end
   end
 

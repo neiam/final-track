@@ -66,6 +66,7 @@ defmodule FinalTrackWeb.FederationControllerTest do
       doc = conn |> ap() |> get(~p"/ap/users/alice") |> json_response(200)
 
       assert %{"id" => ^actor_url, "type" => "Service", "preferredUsername" => "alice"} = doc
+      assert doc["url"] == FinalTrackWeb.base_url() <> "/@alice"
 
       assert doc["publicKey"] == %{
                "id" => actor_url <> "#main-key",
@@ -77,8 +78,59 @@ defmodule FinalTrackWeb.FederationControllerTest do
       refute Map.has_key?(doc, "privateKeyPem")
     end
 
-    test "a browser is sent to the landing grid", %{conn: conn} do
-      assert redirected_to(get(conn, ~p"/ap/users/alice")) == ~p"/"
+    test "a browser on the actor URL is sent to the profile", %{conn: conn} do
+      assert redirected_to(get(conn, ~p"/ap/users/alice")) ==
+               FinalTrackWeb.base_url() <> "/@alice"
+    end
+
+    test "webfinger takes every way people and servers write it", %{
+      conn: conn,
+      actor_url: actor_url
+    } do
+      base = FinalTrackWeb.base_url()
+
+      for resource <- [
+            "acct:alice@localhost",
+            "acct:@alice@localhost",
+            "acct:ALICE@LocalHost",
+            "  acct:alice@localhost ",
+            actor_url,
+            base <> "/@alice",
+            base <> "/@Alice"
+          ] do
+        conn = get(conn, ~p"/.well-known/webfinger?#{[resource: resource]}")
+
+        assert %{"subject" => "acct:alice@localhost", "aliases" => aliases, "links" => links} =
+                 json_response(conn, 200),
+               resource
+
+        assert get_resp_header(conn, "content-type") |> hd() =~ "application/jrd+json"
+        assert (base <> "/@alice") in aliases
+
+        assert %{"href" => profile} =
+                 Enum.find(links, &(&1["rel"] == "http://webfinger.net/rel/profile-page"))
+
+        assert profile == base <> "/@alice"
+      end
+
+      for resource <- [
+            "acct:alice@elsewhere.example",
+            "https://elsewhere.example/@alice",
+            base <> "/@",
+            "alice",
+            "acct:"
+          ] do
+        assert response(get(conn, ~p"/.well-known/webfinger?#{[resource: resource]}"), 404),
+               resource
+      end
+    end
+
+    test "host-meta points at webfinger", %{conn: conn} do
+      conn = get(conn, ~p"/.well-known/host-meta")
+      body = response(conn, 200)
+      assert get_resp_header(conn, "content-type") |> hd() =~ "application/xrd+xml"
+      assert body =~ ~s(rel="lrdd")
+      assert body =~ FinalTrackWeb.base_url() <> "/.well-known/webfinger?resource={uri}"
     end
 
     test "the instance actor", %{conn: conn} do

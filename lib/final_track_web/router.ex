@@ -41,10 +41,29 @@ defmodule FinalTrackWeb.Router do
     plug FinalTrackWeb.Plugs.RequireFederation
   end
 
+  # `/@username`: what browsers and fediverse servers both ask for, so no
+  # :accepts (an activity+json request would be a 406), but the session
+  # and layout, for the profile page. 404 while federation is off.
+  pipeline :profile do
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {FinalTrackWeb.Layouts, :root}
+    plug :put_secure_browser_headers
+    plug :fetch_current_scope_for_user
+    plug FinalTrackWeb.Plugs.RequireFederation
+  end
+
+  scope "/", FinalTrackWeb do
+    pipe_through :profile
+
+    get "/@:username", ProfileController, :show
+  end
+
   scope "/", FinalTrackWeb do
     pipe_through :federation
 
     get "/.well-known/webfinger", FederationController, :webfinger
+    get "/.well-known/host-meta", FederationController, :host_meta
     get "/.well-known/nodeinfo", FederationController, :nodeinfo_links
     get "/nodeinfo/2.0", FederationController, :nodeinfo
 
