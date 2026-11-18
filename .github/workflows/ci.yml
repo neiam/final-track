@@ -120,8 +120,8 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository }}
-            docker.io/neiam/final_track
-            quay.io/neiam/final_track
+            docker.io/neiam/final-track
+            quay.io/neiam/final-track
           tags: |
             type=ref,event=branch
             type=ref,event=pr

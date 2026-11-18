@@ -12,9 +12,9 @@ defmodule FinalTrackWeb.AboutLive do
   # {key, label, image}: the public registries the image is published to
   # (.github/workflows/ci.yml). The forge's own registry is private.
   @registries [
-    {:ghcr, "GitHub", "ghcr.io/neiam/final_track"},
-    {:dockerhub, "Docker Hub", "docker.io/neiam/final_track"},
-    {:quay, "Quay", "quay.io/neiam/final_track"}
+    {:ghcr, "GitHub", "ghcr.io/neiam/final-track"},
+    {:dockerhub, "Docker Hub", "docker.io/neiam/final-track"},
+    {:quay, "Quay", "quay.io/neiam/final-track"}
   ]
 
   # {name, placeholder (and default), width class, label}: the blanks.
