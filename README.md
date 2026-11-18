@@ -24,7 +24,9 @@ Running at **https://finaltrack.neiam.org** (deployment:
 - **Landing grid** (`/`): the latest plays as album art, live. Public:
   visitors see what was played, members also see who.
 - **Covers**: uploaded on the album page, or fetched from MusicBrainz and
-  the Cover Art Archive (automatically the first time an album is played).
+  the Cover Art Archive (automatically the first time an album is played;
+  a collaboration credit like "Justice & Tame Impala" falls back to the
+  main artist).
 - **Private marks**: mark an artist, album or track private and your plays
   of it are only ever shown to you — past ones included, everywhere,
   fediverse posts too.
@@ -62,12 +64,44 @@ curl -X POST https://HOST/api/v1/scrobble \
 | Viewer | Sees |
 |---|---|
 | Anyone | the landing grid: what was played and when, never by whom |
+| Anyone, for a member with a fediverse account | that account's non-private plays on `/@name` and, if it posts publicly, under `/tags/<tag>` |
 | Members | charts, library, album and artist pages, who played what |
 | Fediverse followers | a member's non-private plays, if they turned an account on |
 | You | everything you've played |
 
 Everything shared is filtered by `FinalTrack.Privacy.visible_to/2` at read
 time, which is why marking something private also hides the past.
+
+## Fediverse
+
+Off unless `FINAL_TRACK_ACTIVITYPUB=true`; then each member opts in on the
+Scrobbling page with a username, and chooses:
+
+- **Who sees the posts.** Followers' feeds only (unlisted, the default) or
+  public. Pixelfed and angler show only public posts on a remote profile
+  and only backfill public ones, so an unlisted account looks empty there
+  although followers get every post.
+- **A hashtag** on every post, `#scropple` by default; empty for none.
+- **The artist as a hashtag** too (off by default).
+
+Each new play that isn't private becomes a Note with the album cover
+attached, delivered to followers about 15 seconds after the scrobble (up
+to a minute more if the album's first cover lookup is still running:
+Pixelfed drops posts without media). Plays more than 6 hours old when
+they arrive — a phone's offline queue draining — are recorded but not
+posted. Marking something private sends a `Delete` for what it now covers.
+
+Served: `/.well-known/webfinger` (`acct:user@host`, `acct:@user@host`, or
+the actor or `/@user` URL), `/.well-known/host-meta`, `/.well-known/nodeinfo`
+and `/nodeinfo/2.0`, the instance actor `/ap/actor`, accounts under
+`/ap/users/:name` (inbox, outbox, followers), posts at `/ap/notes/:id`, the
+shared inbox `/ap/inbox`. Inbound: `Follow`, `Undo` of one, `Delete` of an
+actor that's gone; every request's HTTP signature is checked.
+
+Every delivery is logged as a `federation:` line with the inbox and the
+status it got (retries included). Remote servers answer 2xx and process
+later in their own queues, so a post that "never showed up" may just be
+waiting there.
 
 ## Development
 
@@ -140,5 +174,7 @@ and ActivityPub deliveries; covers must be on a volume all pods share.
 | `FinalTrack.Privacy` | private marks and the visibility rule |
 | `FinalTrack.Covers` (+ `Fetcher`, `Queue`, `Store`, `Image`) | cover upload, lookup, storage |
 | `FinalTrack.Federation` (+ `Objects`, `HTTP`, `HTTPSignature`, `Delivery`) | ActivityPub; signatures and guarded HTTP ported from angler |
+| `FinalTrackWeb.FederationController`, `ProfileController`, `TagController` | the ActivityPub endpoints, `/@name`, `/tags/:tag` |
+| `FinalTrackWeb.Api.ScrobbleController`, `Plugs.ScrobbleAuth` | the scrobbling API |
 | `FinalTrack.Accounts` | users, invites, display names |
 | `FinalTrack.Release` | what `bin/migrate`, `bin/invite` run |
