@@ -41,6 +41,15 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
+  # What the server calls itself (NodeInfo, its fediverse actor): defaults an
+  # admin's Instance page overrides.
+  config :final_track, FinalTrack.Instance,
+    node_name: System.get_env("FINAL_TRACK_NODE_NAME"),
+    node_description: System.get_env("FINAL_TRACK_NODE_DESCRIPTION")
+
+  # Members of this OIDC group become admins when they sign in.
+  config :final_track, :admin_group, System.get_env("FINAL_TRACK_ADMIN_GROUP", "admins")
+
   # ActivityPub: off unless FINAL_TRACK_ACTIVITYPUB=true. PHX_HOST must be
   # the public domain first: it's the domain fediverse accounts live on.
   config :final_track, FinalTrack.Federation,

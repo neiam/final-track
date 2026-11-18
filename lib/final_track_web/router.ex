@@ -67,7 +67,7 @@ defmodule FinalTrackWeb.Router do
     get "/.well-known/webfinger", FederationController, :webfinger
     get "/.well-known/host-meta", FederationController, :host_meta
     get "/.well-known/nodeinfo", FederationController, :nodeinfo_links
-    get "/nodeinfo/2.0", FederationController, :nodeinfo
+    get "/nodeinfo/:version", FederationController, :nodeinfo
 
     get "/ap/actor", FederationController, :instance_actor
     post "/ap/actor/inbox", FederationController, :inbox
@@ -121,6 +121,9 @@ defmodule FinalTrackWeb.Router do
       live "/albums", LibraryLive, :albums
       live "/albums/:id", AlbumLive.Show, :show
       live "/artists/:id", ArtistLive.Show, :show
+
+      # Admins only: the LiveView's own on_mount checks (UserAuth :require_admin).
+      live "/admin/instance", AdminLive.Instance, :edit
     end
 
     post "/users/update-password", UserSessionController, :update_password

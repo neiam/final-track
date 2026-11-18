@@ -37,6 +37,10 @@ config :final_track, FinalTrack.Repo,
   hostname: "localhost",
   database: "final_track_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
+  # LiveView processes share a test's sandbox connection; under a full
+  # parallel suite the default 50ms queue target made them give up.
+  queue_target: 1_000,
+  queue_interval: 5_000,
   pool_size: System.schedulers_online() * 2,
   # compose.yml's postgres by default; POSTGRES_PORT=5432 for the host's own.
   port: String.to_integer(System.get_env("POSTGRES_PORT") || "54330")

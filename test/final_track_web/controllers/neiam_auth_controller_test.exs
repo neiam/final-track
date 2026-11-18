@@ -277,6 +277,12 @@ defmodule FinalTrackWeb.NeiamAuthControllerTest do
       %{idp: idp}
     end
 
+    test "a member of other groups is no admin", %{conn: conn, idp: idp} do
+      FakeIdP.put_user(idp, email: "member@example.com", groups: ["admins-not", "users"])
+      user = conn |> sso(idp, "neiam") |> signed_in_user()
+      refute FinalTrack.Accounts.get_user!(user.id).is_admin
+    end
+
     test "a new account is confirmed, passwordless, named from the IdP",
          %{conn: conn, idp: idp} do
       FakeIdP.put_user(idp, preferred_username: "Alice", email: "alice@example.com")
@@ -324,6 +330,8 @@ defmodule FinalTrackWeb.NeiamAuthControllerTest do
                Repo.all(Identity)
 
       assert identity.user_id == user.id
+      # The admins group makes them an admin.
+      assert FinalTrack.Accounts.get_user!(user.id).is_admin
     end
   end
 

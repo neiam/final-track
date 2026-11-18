@@ -305,6 +305,21 @@ defmodule FinalTrack.Accounts do
     end
   end
 
+  ## Admins
+
+  @doc """
+  Makes `user` an admin, or not. Only ever called from trusted code (the
+  OIDC adapter for the admin group, the release command); never from a
+  form, and `is_admin` is in no changeset's cast.
+  """
+  def set_admin(%User{} = user, admin?) when is_boolean(admin?) do
+    user |> Ecto.Changeset.change(is_admin: admin?) |> Repo.update()
+  end
+
+  @doc "Whether `user` is an admin."
+  def admin?(%User{is_admin: true}), do: true
+  def admin?(_), do: false
+
   ## Profile
 
   @doc "A changeset for the profile form."

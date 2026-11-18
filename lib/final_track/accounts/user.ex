@@ -5,6 +5,8 @@ defmodule FinalTrack.Accounts.User do
   schema "users" do
     field :email, :string
     field :display_name, :string
+    # Edits instance settings. Never cast from a form: see Accounts.set_admin/2.
+    field :is_admin, :boolean, default: false
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime

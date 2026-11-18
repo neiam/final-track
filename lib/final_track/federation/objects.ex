@@ -49,8 +49,8 @@ defmodule FinalTrack.Federation.Objects do
       "id" => url,
       "type" => "Application",
       "preferredUsername" => domain(),
-      "name" => domain(),
-      "summary" => "The Final Track server at #{domain()}.",
+      "name" => FinalTrack.Instance.node_name(),
+      "summary" => "<p>#{escape(FinalTrack.Instance.node_description())}</p>",
       "inbox" => url <> "/inbox",
       "outbox" => url <> "/outbox",
       "url" => base() <> "/about",
@@ -279,29 +279,54 @@ defmodule FinalTrack.Federation.Objects do
     }
   end
 
+  @nodeinfo_versions ["2.1", "2.0"]
+  # The software's own home: what NodeInfo 2.1 reports for every server
+  # running it, so not the instance's address.
+  @repository "https://gg.neiam.co/r/neiam/final_track"
+
+  def nodeinfo_versions, do: @nodeinfo_versions
+
+  @doc "`/.well-known/nodeinfo`: where each schema version is served."
   def nodeinfo_links do
     %{
-      "links" => [
-        %{
-          "rel" => "http://nodeinfo.diaspora.software/ns/schema/2.0",
-          "href" => base() <> "/nodeinfo/2.0"
-        }
-      ]
+      "links" =>
+        for v <- @nodeinfo_versions do
+          %{
+            "rel" => "http://nodeinfo.diaspora.software/ns/schema/" <> v,
+            "href" => base() <> "/nodeinfo/" <> v
+          }
+        end
     }
   end
 
-  def nodeinfo(%{users: users, posts: posts}) do
+  @doc """
+  The NodeInfo document, `version` "2.1" or "2.0". The software name must
+  match `^[a-z0-9-]+$` (the schema), hence "finaltrack"; 2.1 adds where the
+  software lives. The node's name and description are `FinalTrack.Instance`'s.
+  """
+  def nodeinfo(%{users: users, posts: posts}, version \\ "2.1")
+      when version in @nodeinfo_versions do
+    software = %{
+      "name" => "finaltrack",
+      "version" => :final_track |> Application.spec(:vsn) |> to_string()
+    }
+
+    software =
+      if version == "2.1",
+        do: Map.merge(software, %{"repository" => @repository, "homepage" => @repository}),
+        else: software
+
     %{
-      "version" => "2.0",
-      "software" => %{
-        "name" => "final_track",
-        "version" => :final_track |> Application.spec(:vsn) |> to_string()
-      },
+      "version" => version,
+      "software" => software,
       "protocols" => ["activitypub"],
       "services" => %{"inbound" => [], "outbound" => []},
       "openRegistrations" => FinalTrack.Accounts.registration_open?(),
       "usage" => %{"users" => %{"total" => users}, "localPosts" => posts},
-      "metadata" => %{}
+      "metadata" => %{
+        "nodeName" => FinalTrack.Instance.node_name(),
+        "nodeDescription" => FinalTrack.Instance.node_description()
+      }
     }
   end
 

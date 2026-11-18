@@ -33,11 +33,13 @@ defmodule FinalTrackWeb.TagControllerTest do
   end
 
   test "artist tags only for accounts that tag artists", %{alice: alice} do
-    play_fixture(alice)
+    # Explicit times: two plays in the same second have no order.
+    now = System.os_time(:second)
+    play_fixture(alice, %{"timestamp" => now - 60})
     assert tagged("pinkfloyd") == []
 
     {:ok, _} = Federation.save_account(alice, %{tag_artist: true})
-    play_fixture(alice, %{"track" => "Money"})
+    play_fixture(alice, %{"track" => "Money", "timestamp" => now})
     # Earlier posts count too: the switch says what the account tags.
     assert tagged("pinkfloyd") == ["Money", "Time"]
   end

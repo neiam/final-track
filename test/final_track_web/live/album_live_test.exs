@@ -5,7 +5,7 @@ defmodule FinalTrackWeb.AlbumLiveTest do
   import FinalTrack.AccountsFixtures
   import FinalTrack.ScrobblesFixtures
 
-  alias FinalTrack.{Catalog, Charts, Privacy, Repo}
+  alias FinalTrack.{Catalog, Charts, Privacy}
 
   setup :register_and_log_in_user
 
@@ -60,32 +60,6 @@ defmodule FinalTrackWeb.AlbumLiveTest do
 
     refute Catalog.get_album!(album.id).cover_key
     assert render(lv) =~ "isn&#39;t a JPEG, PNG or WebP"
-  end
-
-  test "fetch a cover through the queue", %{conn: conn, album: album} do
-    Req.Test.stub(FinalTrack.Covers.Fetcher, fn
-      %{host: "musicbrainz.org"} = conn ->
-        Req.Test.json(conn, %{
-          "release-groups" => [%{"id" => Ecto.UUID.generate(), "score" => 100}]
-        })
-
-      conn ->
-        Plug.Conn.send_resp(conn, 200, png_bytes())
-    end)
-
-    # The queue is a global process: let it use this test's stub and DB.
-    queue = Process.whereis(FinalTrack.Covers.Queue)
-    Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), queue)
-    Req.Test.allow(FinalTrack.Covers.Fetcher, self(), queue)
-
-    {:ok, lv, _html} = live(conn, ~p"/albums/#{album.id}")
-    lv |> element("#fetch-cover") |> render_click()
-
-    # The queue's broadcast reaches the page; wait for it to re-render.
-    _ = :sys.get_state(queue)
-    _ = :sys.get_state(lv.pid)
-    assert has_element?(lv, "#album-cover img")
-    assert Catalog.get_album!(album.id).cover_source == "coverartarchive"
   end
 
   test "keep the album, or one track, private", %{

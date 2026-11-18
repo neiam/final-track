@@ -95,12 +95,16 @@ defmodule FinalTrackWeb.FederationController do
 
   def nodeinfo_links(conn, _params), do: json(conn, Objects.nodeinfo_links())
 
-  def nodeinfo(conn, _params) do
-    conn
-    |> put_resp_content_type(
-      ~s(application/json; profile="http://nodeinfo.diaspora.software/ns/schema/2.0#")
-    )
-    |> send_resp(200, Jason.encode_to_iodata!(Objects.nodeinfo(Federation.usage())))
+  def nodeinfo(conn, %{"version" => version}) do
+    if version in Objects.nodeinfo_versions() do
+      conn
+      |> put_resp_content_type(
+        ~s(application/json; profile="http://nodeinfo.diaspora.software/ns/schema/#{version}#")
+      )
+      |> send_resp(200, Jason.encode_to_iodata!(Objects.nodeinfo(Federation.usage(), version)))
+    else
+      send_resp(conn, 404, "")
+    end
   end
 
   ## Actors and their collections

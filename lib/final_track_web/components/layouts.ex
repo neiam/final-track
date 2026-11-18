@@ -87,6 +87,11 @@ defmodule FinalTrackWeb.Layouts do
                   <li class="menu-title font-mono text-xs truncate">
                     {@current_scope.user.email}
                   </li>
+                  <li :if={FinalTrack.Accounts.admin?(@current_scope.user)}>
+                    <.link navigate={~p"/admin/instance"} id="nav-admin">
+                      <.icon name="hero-wrench-screwdriver-micro" class="size-4" /> Instance
+                    </.link>
+                  </li>
                   <li>
                     <.link navigate={~p"/users/settings"} id="nav-settings">
                       <.icon name="hero-cog-6-tooth-micro" class="size-4" /> Settings

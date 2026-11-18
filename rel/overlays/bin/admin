@@ -1,0 +1,16 @@
+#!/bin/sh
+# Make an account an admin (edits instance settings), or revoke it.
+#   bin/admin you@example.com
+#   bin/admin --revoke you@example.com
+# The email travels as ADMIN_EMAIL, never spliced into the Elixir eval runs.
+set -eu
+
+usage() { echo "usage: $0 [--revoke] EMAIL" >&2; exit 2; }
+
+export ADMIN_REVOKE=false
+if [ "${1:-}" = "--revoke" ]; then export ADMIN_REVOKE=true; shift; fi
+[ $# -eq 1 ] && [ -n "$1" ] || usage
+export ADMIN_EMAIL="$1"
+
+cd -P -- "$(dirname -- "$0")"
+exec ./final_track eval FinalTrack.Release.admin

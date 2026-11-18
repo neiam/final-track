@@ -44,18 +44,36 @@ defmodule FinalTrackWeb.FederationControllerTest do
       assert response(conn |> ap() |> get(~p"/ap/users/alice"), 404)
     end
 
-    test "nodeinfo", %{conn: conn} do
-      assert %{"links" => [%{"href" => href}]} =
-               json_response(get(conn, ~p"/.well-known/nodeinfo"), 200)
+    test "nodeinfo: 2.1 and 2.0, a schema-valid name, the node's name", %{conn: conn} do
+      assert %{"links" => links} = json_response(get(conn, ~p"/.well-known/nodeinfo"), 200)
 
-      assert href =~ "/nodeinfo/2.0"
+      assert Enum.map(links, & &1["rel"]) == [
+               "http://nodeinfo.diaspora.software/ns/schema/2.1",
+               "http://nodeinfo.diaspora.software/ns/schema/2.0"
+             ]
 
-      assert %{
-               "software" => %{"name" => "final_track"},
-               "protocols" => ["activitypub"],
-               "usage" => %{"users" => %{"total" => 1}}
-             } =
-               json_response(get(conn, ~p"/nodeinfo/2.0"), 200)
+      for %{"href" => href} <- links do
+        path = URI.parse(href).path
+        conn = get(build_conn(), path)
+        doc = json_response(conn, 200)
+        version = String.trim_leading(path, "/nodeinfo/")
+
+        assert doc["version"] == version
+        assert get_resp_header(conn, "content-type") |> hd() =~ "schema/#{version}#"
+        assert doc["software"]["name"] =~ ~r/^[a-z0-9-]+$/
+        assert doc["software"]["name"] == "finaltrack"
+        assert doc["protocols"] == ["activitypub"]
+        assert doc["usage"]["users"]["total"] == 1
+        assert doc["metadata"]["nodeName"] == "Final Track"
+        assert is_binary(doc["metadata"]["nodeDescription"])
+      end
+
+      v21 = json_response(get(conn, ~p"/nodeinfo/2.1"), 200)
+      assert v21["software"]["repository"] =~ "gg.neiam.co"
+      v20 = json_response(get(conn, ~p"/nodeinfo/2.0"), 200)
+      refute Map.has_key?(v20["software"], "repository")
+
+      assert response(get(conn, ~p"/nodeinfo/9.9"), 404)
     end
 
     test "the account's actor, with its key", %{

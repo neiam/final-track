@@ -102,6 +102,36 @@ defmodule FinalTrack.Release do
     end
   end
 
+  @doc """
+  Makes the account with this email an admin (or, with `false`, not):
+  `bin/admin you@example.com`, `bin/admin --revoke you@example.com`.
+  How a server without SSO gets its first admin.
+  """
+  def admin(email \\ nil, admin? \\ nil) do
+    load_app()
+    email = email || env("ADMIN_EMAIL") || raise "ADMIN_EMAIL is required"
+    admin? = if is_nil(admin?), do: env("ADMIN_REVOKE") != "true", else: admin?
+
+    {:ok, result, _apps} =
+      Ecto.Migrator.with_repo(FinalTrack.Repo, fn _repo ->
+        case FinalTrack.Accounts.get_user_by_email(email) do
+          nil -> {:error, :no_such_user}
+          user -> FinalTrack.Accounts.set_admin(user, admin?)
+        end
+      end)
+
+    case result do
+      {:ok, user} ->
+        IO.puts(
+          "#{user.email} is #{if user.is_admin, do: "now an admin", else: "no longer an admin"}"
+        )
+
+      {:error, :no_such_user} ->
+        IO.puts(:stderr, "No user with email #{email}")
+        System.halt(1)
+    end
+  end
+
   defp env(name) do
     case System.get_env(name) do
       nil -> nil

@@ -93,7 +93,8 @@ posted. Marking something private sends a `Delete` for what it now covers.
 
 Served: `/.well-known/webfinger` (`acct:user@host`, `acct:@user@host`, or
 the actor or `/@user` URL), `/.well-known/host-meta`, `/.well-known/nodeinfo`
-and `/nodeinfo/2.0`, the instance actor `/ap/actor`, accounts under
+with `/nodeinfo/2.1` and `/2.0` (software `finaltrack`; the node's name and
+description are the admin's, see Admins), the instance actor `/ap/actor`, accounts under
 `/ap/users/:name` (inbox, outbox, followers), posts at `/ap/notes/:id`, the
 shared inbox `/ap/inbox`. Inbound: `Follow`, `Undo` of one, `Delete` of an
 actor that's gone; every request's HTTP signature is checked.
@@ -132,6 +133,7 @@ master: `ggr.neiam.co/neiam/final_track:{master,latest,sha-…}`. The release
 | `migrate` | run migrations (an init container in Kubernetes) |
 | `invite [--email E] [--note N] [--days D] [--by E]` | print a single-use registration link |
 | `invite-link EMAIL` | a fresh link for an invite addressed to EMAIL |
+| `admin [--revoke] EMAIL` | make an account an admin (or not) |
 | `final_track rpc 'FinalTrack.Covers.retry_misses()'` | look up covers again for albums that never matched |
 
 The About page has copy-ready Podman/Docker commands for a single box.
@@ -153,7 +155,17 @@ The About page has copy-ready Podman/Docker commands for a single box.
 | `SMTP_RELAY`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_SSL`, `SMTP_TLS`, `SMTP_AUTH` | — | mail. Optional: without a relay (and, if it needs auth, a password) mail is off — no emailed links, registration takes a password |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `noreply@PHX_HOST`, `Final Track` | |
 | `OIDC_ENABLED`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, … | off | see `neiam_auth`'s README; `OIDC_LOGIN_MODE` picks how SSO and passwords coexist |
+| `FINAL_TRACK_NODE_NAME`, `FINAL_TRACK_NODE_DESCRIPTION` | `Final Track`, a one-liner | what NodeInfo and the instance's fediverse actor call the server; an admin's Instance page overrides them |
+| `FINAL_TRACK_ADMIN_GROUP` | `admins` | members of this OIDC group become admins on sign-in |
 | `CLUSTER_NAMESPACE`, `POD_IP`, `RELEASE_COOKIE` | — | clustering in Kubernetes (below) |
+
+### Admins
+
+Admins get an **Instance** page (`/admin/instance`, in the account menu)
+for the server's name and description. Members of the OIDC admin group
+become admins when they sign in with SSO; elsewhere, `bin/admin EMAIL` (or
+`mix final_track.admin EMAIL` in dev). Leaving the group doesn't demote
+anyone — `bin/admin --revoke EMAIL` does.
 
 ### Clustering
 
@@ -176,5 +188,6 @@ and ActivityPub deliveries; covers must be on a volume all pods share.
 | `FinalTrack.Federation` (+ `Objects`, `HTTP`, `HTTPSignature`, `Delivery`) | ActivityPub; signatures and guarded HTTP ported from angler |
 | `FinalTrackWeb.FederationController`, `ProfileController`, `TagController` | the ActivityPub endpoints, `/@name`, `/tags/:tag` |
 | `FinalTrackWeb.Api.ScrobbleController`, `Plugs.ScrobbleAuth` | the scrobbling API |
-| `FinalTrack.Accounts` | users, invites, display names |
+| `FinalTrack.Accounts` | users, invites, display names, admins |
+| `FinalTrack.Instance` | the server's name and description |
 | `FinalTrack.Release` | what `bin/migrate`, `bin/invite` run |

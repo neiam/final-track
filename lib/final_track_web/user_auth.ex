@@ -231,6 +231,24 @@ defmodule FinalTrackWeb.UserAuth do
     end
   end
 
+  # Admin-only pages: after :require_authenticated, so there is a user.
+  def on_mount(:require_admin, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    if FinalTrack.Accounts.admin?(
+         socket.assigns.current_scope && socket.assigns.current_scope.user
+       ) do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "That page is for admins.")
+        |> Phoenix.LiveView.redirect(to: ~p"/charts")
+
+      {:halt, socket}
+    end
+  end
+
   def on_mount(:require_sudo_mode, _params, session, socket) do
     socket = mount_current_scope(socket, session)
 

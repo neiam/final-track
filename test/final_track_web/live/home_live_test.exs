@@ -11,7 +11,14 @@ defmodule FinalTrackWeb.HomeLiveTest do
     alice = user_fixture()
     {:ok, alice} = FinalTrack.Accounts.update_user_profile(alice, %{display_name: "Alice"})
     play_fixture(alice, %{"timestamp" => System.os_time(:second) - 120})
-    play_fixture(alice, %{"artist" => "Air", "track" => "Sexy Boy", "album" => "Moon Safari"})
+    # Before "now", so a play made in a test is the newest, not a tie.
+    play_fixture(alice, %{
+      "artist" => "Air",
+      "track" => "Sexy Boy",
+      "album" => "Moon Safari",
+      "timestamp" => System.os_time(:second) - 60
+    })
+
     %{alice: alice, play: hd(Scrobbles.recent(Charts.audience(alice), 1))}
   end
 

@@ -8,7 +8,8 @@ defmodule FinalTrack.NeiamAuthAdapter do
   name comes from the provider's `name` claim. An existing account is only
   ever matched by email (`get_user_by_email/1`).
 
-  No role flags: groups are recorded on the identity row only.
+  Groups: members of the admin group become admins (`apply_groups/2`); all
+  groups are recorded on the identity row.
 
   Who must sign in through SSO is neiam_auth's own rule (`sso_required?/1`):
   under `OIDC_LOGIN_MODE=sso`, accounts linked to a provider with
@@ -74,9 +75,18 @@ defmodule FinalTrack.NeiamAuthAdapter do
   @impl true
   def linkable?(%User{}), do: true
 
-  # No role flags; the groups are still recorded on the identity.
+  # Members of the admin group (`config :final_track, :admin_group`,
+  # FINAL_TRACK_ADMIN_GROUP, default "admins") are made admins on sign-in.
+  # Never demoted here: leaving the group doesn't revoke an admin made by
+  # `FinalTrack.Release.admin/2`; revoke with that instead.
   @impl true
+  def apply_groups(%User{is_admin: false} = user, groups) when is_list(groups) do
+    if admin_group() in groups, do: Accounts.set_admin(user, true), else: {:ok, user}
+  end
+
   def apply_groups(user, _groups), do: {:ok, user}
+
+  defp admin_group, do: Application.get_env(:final_track, :admin_group, "admins")
 
   @impl true
   def sso_required?(user), do: NeiamAuth.sso_required?(user)

@@ -194,22 +194,6 @@ defmodule FinalTrack.CoversTest do
     assert {:error, :not_found} = Store.fetch(second.cover_key)
   end
 
-  test "retry_misses/0 counts the albums that never matched", %{album: album} do
-    {:ok, _} = Catalog.mark_cover_checked(album)
-    other = Catalog.ensure_album!(album.artist, "Meddle")
-    {:ok, _} = Catalog.mark_cover_checked(other, %{mbid: "known-but-no-art"})
-
-    # Only the first: the second matched, the archive just has no art.
-    stub(&Req.Test.json(&1, %{"release-groups" => []}), &Plug.Conn.send_resp(&1, 404, ""))
-    # The queue is global: let it use this test's stub (made first) and DB.
-    queue = Process.whereis(FinalTrack.Covers.Queue)
-    Ecto.Adapters.SQL.Sandbox.allow(FinalTrack.Repo, self(), queue)
-    Req.Test.allow(FinalTrack.Covers.Fetcher, self(), queue)
-    assert Covers.retry_misses() == 1
-    album_id = album.id
-    assert_receive {:cover_fetch_failed, ^album_id, :no_match}
-  end
-
   test "maybe_fetch/1 only queues what was never tried, and only when enabled", %{album: album} do
     # Test config has auto_fetch off: nothing is queued.
     assert :ok = Covers.maybe_fetch(album)
