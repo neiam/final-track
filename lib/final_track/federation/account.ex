@@ -29,6 +29,8 @@ defmodule FinalTrack.Federation.Account do
     field :visibility, :string, default: "unlisted"
     # Added to every post, without the "#"; nil for none.
     field :hashtag, :string, default: "scropple"
+    # Also tag each post with its artist (Pink Floyd -> #pinkfloyd).
+    field :tag_artist, :boolean, default: false
     field :public_key_pem, :string
     field :private_key_pem, :string, redact: true
 
@@ -49,7 +51,7 @@ defmodule FinalTrack.Federation.Account do
     # No empty_values: Ecto would turn a cleared hashtag ("") into the
     # field's default ("scropple"), so it could never be switched off.
     # normalize_hashtag/1 makes "" nil instead.
-    |> cast(attrs, [:username, :enabled, :visibility, :hashtag], empty_values: [])
+    |> cast(attrs, [:username, :enabled, :visibility, :hashtag, :tag_artist], empty_values: [])
     |> validate_inclusion(:visibility, Map.keys(@visibilities))
     |> update_change(:hashtag, &normalize_hashtag/1)
     |> validate_length(:hashtag, max: 30)

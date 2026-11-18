@@ -336,6 +336,17 @@ defmodule FinalTrackWeb.UserLive.Scrobbling do
                 instead of unfollowing. Leave it empty for none.
               </p>
             </div>
+            <div>
+              <.input
+                field={@fediverse_form[:tag_artist]}
+                type="checkbox"
+                label="Also tag posts with the artist"
+              />
+              <p class="-mt-1 text-xs text-base-content/60">
+                Pink Floyd becomes <span class="font-mono">#pinkfloyd</span>: the post then shows
+                under that artist's tag on other servers too.
+              </p>
+            </div>
             <div class="flex items-center justify-between gap-3">
               <.input field={@fediverse_form[:enabled]} type="checkbox" label="Post my plays" />
               <button

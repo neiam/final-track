@@ -33,6 +33,11 @@ defmodule FinalTrackWeb.UserLive.FediverseSettingsTest do
     lv |> form("#fediverse-form", fediverse: %{hashtag: "#nowplaying"}) |> render_submit()
     assert %{hashtag: "nowplaying"} = Federation.get_account(user)
 
+    # Artist tags: off until asked for.
+    assert %{tag_artist: false} = Federation.get_account(user)
+    lv |> form("#fediverse-form", fediverse: %{tag_artist: "true"}) |> render_submit()
+    assert %{tag_artist: true} = Federation.get_account(user)
+
     lv |> form("#fediverse-form", fediverse: %{enabled: "false"}) |> render_submit()
     assert %{enabled: false} = Federation.get_account(user)
     assert has_element?(lv, "#fediverse-status", "off")

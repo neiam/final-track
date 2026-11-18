@@ -110,6 +110,46 @@ defmodule FinalTrack.FederationTest do
     refute content =~ "hashtag"
   end
 
+  test "artist names as hashtags" do
+    alias FinalTrack.Federation.Objects
+
+    assert Objects.artist_hashtag("Justice") == "justice"
+    assert Objects.artist_hashtag("Pink Floyd") == "pinkfloyd"
+    assert Objects.artist_hashtag("AC/DC") == "acdc"
+    assert Objects.artist_hashtag("Sigur Rós") == "sigurrós"
+    assert Objects.artist_hashtag("Justice & Tame Impala") == "justicetameimpala"
+    assert Objects.artist_hashtag("2Pac") == "2pac"
+    assert Objects.artist_hashtag("311") == nil
+    assert Objects.artist_hashtag("!!!") == nil
+  end
+
+  test "the artist tag is opt-in, joins the account's, and isn't doubled", %{user: user} do
+    play_fixture(user)
+
+    assert_received {:delivered, _, %{"object" => %{"tag" => [%{"name" => "#scropple"}]}}, _, _,
+                     _}
+
+    {:ok, _} = Federation.save_account(user, %{tag_artist: true})
+    play_fixture(user, %{"track" => "Money"})
+    assert_received {:delivered, _, %{"object" => note}, _, _, _}
+    assert Enum.map(note["tag"], & &1["name"]) == ["#scropple", "#pinkfloyd"]
+    assert note["content"] =~ "#<span>pinkfloyd</span>"
+
+    # An account tag that is the artist's: once.
+    {:ok, _} = Federation.save_account(user, %{hashtag: "PinkFloyd"})
+    play_fixture(user, %{"track" => "Breathe"})
+
+    assert_received {:delivered, _, %{"object" => %{"tag" => [%{"name" => "#PinkFloyd"}]}}, _, _,
+                     _}
+
+    # An artist with no usable tag: just the account's.
+    {:ok, _} = Federation.save_account(user, %{hashtag: "scropple"})
+    play_fixture(user, %{"artist" => "311", "track" => "Amber", "album" => nil})
+
+    assert_received {:delivered, _, %{"object" => %{"tag" => [%{"name" => "#scropple"}]}}, _, _,
+                     _}
+  end
+
   test "hashtags follow Mastodon's rules", %{user: user} do
     for bad <- ["two words", "no-dashes", "1234", String.duplicate("a", 31)] do
       assert {:error, cs} = Federation.save_account(user, %{hashtag: bad}), bad
