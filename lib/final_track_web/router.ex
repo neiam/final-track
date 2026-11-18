@@ -40,7 +40,8 @@ defmodule FinalTrackWeb.Router do
     plug FinalTrackWeb.Plugs.RequireFederation
   end
 
-  # `/@username`: what browsers and fediverse servers both ask for, so no
+  # `/@username` and `/tags/:tag`: what browsers and fediverse servers both
+  # ask for (a profile, a hashtag link), so no
   # :accepts (an activity+json request would be a 406), but the session
   # and layout, for the profile page. 404 while federation is off.
   pipeline :profile do
@@ -56,6 +57,8 @@ defmodule FinalTrackWeb.Router do
     pipe_through :profile
 
     get "/@:username", ProfileController, :show
+    # Where the hashtag links in posts point.
+    get "/tags/:tag", TagController, :show
   end
 
   scope "/", FinalTrackWeb do

@@ -5,6 +5,8 @@ defmodule FinalTrack.Catalog.Artist do
   schema "artists" do
     field :name, :string
     field :key, :string
+    # The name as a hashtag (`FinalTrack.Catalog.hashtag/1`); nil if none.
+    field :tag, :string
 
     has_many :albums, FinalTrack.Catalog.Album
 

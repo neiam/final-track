@@ -25,8 +25,20 @@ defmodule FinalTrack.Catalog do
 
   @doc "Finds or creates the artist named `name`."
   def ensure_artist!(name) do
-    upsert!(%Artist{name: name, key: normalize(name)}, [:key])
+    upsert!(%Artist{name: name, key: normalize(name), tag: hashtag(name)}, [:key])
   end
+
+  @doc """
+  A name as a hashtag: lowercased, keeping only letters and digits
+  ("Pink Floyd" → "pinkfloyd", "AC/DC" → "acdc"). nil when that leaves
+  nothing usable: empty, or only digits, which no server takes as a tag.
+  """
+  def hashtag(name) when is_binary(name) do
+    tag = name |> String.downcase() |> String.replace(~r/[^\p{L}\p{N}]+/u, "")
+    if tag =~ ~r/\p{L}/u, do: tag, else: nil
+  end
+
+  def hashtag(_), do: nil
 
   @doc "Finds or creates the album `title` under `artist`."
   def ensure_album!(%Artist{id: artist_id}, title) do

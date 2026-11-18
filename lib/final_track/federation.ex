@@ -243,6 +243,37 @@ defmodule FinalTrack.Federation do
   end
 
   @doc """
+  What this server has published under `tag` (no "#", any case), newest
+  first: posts of public accounts that use it as their hashtag, or that tag
+  posts with their artist and played an artist whose tag it is. Unlisted
+  accounts are left out, as Mastodon keeps unlisted posts off hashtag
+  timelines; private plays never show. Posts come with scrobble (track,
+  album, artist) and account (user) loaded.
+  """
+  def tagged_posts(tag, limit \\ 48) when is_binary(tag) do
+    tag = tag |> String.trim_leading("#") |> String.downcase()
+
+    if enabled?() and tag != "" do
+      from(p in Post,
+        join: a in assoc(p, :account),
+        # Through the association, so the preload below can use it.
+        join: s in assoc(p, :scrobble),
+        as: :scrobble,
+        join: ar in assoc(s, :artist),
+        where: a.enabled and a.visibility == "public",
+        where: fragment("lower(?)", a.hashtag) == ^tag or (a.tag_artist and ar.tag == ^tag),
+        order_by: [desc: s.played_at],
+        limit: ^limit,
+        preload: [scrobble: {s, [track: :artist, album: :artist]}, account: {a, :user}]
+      )
+      |> Privacy.visible_to(nil)
+      |> Repo.all()
+    else
+      []
+    end
+  end
+
+  @doc """
   Withdraws `user`'s posts that are private now (after a `Privacy.mark/2`):
   a `Delete` to followers, and the post is forgotten.
   """

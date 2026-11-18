@@ -157,17 +157,8 @@ defmodule FinalTrack.Federation.Objects do
     Enum.uniq_by(own ++ artist, &String.downcase/1)
   end
 
-  @doc """
-  An artist's name as a hashtag: lowercased, keeping only letters and
-  digits ("Pink Floyd" → "pinkfloyd", "AC/DC" → "acdc"). nil when that
-  leaves nothing usable: empty, or only digits, which no server takes.
-  """
-  def artist_hashtag(name) when is_binary(name) do
-    tag = name |> String.downcase() |> String.replace(~r/[^\p{L}\p{N}]+/u, "")
-    if tag =~ ~r/\p{L}/u, do: tag, else: nil
-  end
-
-  def artist_hashtag(_), do: nil
+  @doc "An artist's name as a hashtag; see `FinalTrack.Catalog.hashtag/1`."
+  def artist_hashtag(name), do: FinalTrack.Catalog.hashtag(name)
 
   defp tag_url(tag), do: base() <> "/tags/" <> URI.encode(String.downcase(tag))
 
