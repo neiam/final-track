@@ -44,24 +44,35 @@ defmodule FinalTrack.Federation.Delivery do
 
   defp attempt(inbox, activity, signer, backoff) do
     case HTTP.deliver(inbox, activity, signer) do
-      :ok ->
+      {:ok, status} ->
+        # Every outcome is logged: a remote server answers 2xx and then
+        # validates in its own queue, so "it never showed up" starts here.
+        Logger.info("federation: #{describe(activity)} to #{inbox}: #{status}")
         :ok
 
       {:error, reason} ->
         case {HTTP.transient_error?(reason), backoff, inline?()} do
           {true, [wait | rest], false} ->
+            Logger.info(
+              "federation: #{describe(activity)} to #{inbox}: #{inspect(reason)}, retrying in #{div(wait, 1000)}s"
+            )
+
             Process.sleep(wait)
             attempt(inbox, activity, signer, rest)
 
           _ ->
             Logger.warning(
-              "federation: #{activity["type"]} to #{inbox} failed: #{inspect(reason)}"
+              "federation: #{describe(activity)} to #{inbox} failed: #{inspect(reason)}"
             )
 
             {:error, reason}
         end
     end
   end
+
+  # "Create https://host/ap/notes/<id>", "Accept", ...
+  defp describe(%{"type" => type, "object" => %{"id" => id}}), do: "#{type} #{id}"
+  defp describe(%{"type" => type}), do: type
 
   defp run(fun) do
     if inline?() do

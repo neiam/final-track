@@ -28,7 +28,6 @@ defmodule FinalTrackWeb.Router do
   scope "/", FinalTrackWeb do
     pipe_through :browser
 
-    get "/about", PageController, :about
     # Album art isn't private (plays are), and the landing grid shows it to
     # signed-out visitors too.
     get "/covers/:id", CoverController, :show
@@ -131,6 +130,8 @@ defmodule FinalTrackWeb.Router do
       on_mount: [{FinalTrackWeb.UserAuth, :mount_current_scope}] do
       # The landing grid: public, with more for members.
       live "/", HomeLive, :index
+      # What it is, and how to run your own.
+      live "/about", AboutLive, :index
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new

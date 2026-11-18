@@ -53,7 +53,7 @@ defmodule FinalTrack.Federation.HTTP do
 
   @doc """
   POSTs `activity` (a map) to an inbox, signed with `{key_id, private_key_pem}`.
-  `:ok`, or `{:error, reason}` (`{:unavailable, status}` for 408/429/5xx,
+  `{:ok, status}` for a 2xx, or `{:error, reason}` (`{:unavailable, status}` for 408/429/5xx,
   which are worth retrying).
   """
   def deliver(inbox, activity, {key_id, private_key_pem}) do
@@ -85,7 +85,7 @@ defmodule FinalTrack.Federation.HTTP do
       ]
       |> request(uri, ip)
       |> case do
-        {:ok, %{status: s}} when s in 200..299 -> :ok
+        {:ok, %{status: s}} when s in 200..299 -> {:ok, s}
         {:ok, %{status: s}} -> check_status(s)
         {:error, reason} -> {:error, reason}
       end

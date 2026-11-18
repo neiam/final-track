@@ -20,6 +20,7 @@ defmodule FinalTrack.Federation do
   ported from angler.
   """
   import Ecto.Query, warn: false
+  require Logger
 
   alias FinalTrack.Accounts.User
   alias FinalTrack.{Privacy, Repo}
@@ -177,7 +178,8 @@ defmodule FinalTrack.Federation do
     :ok
   end
 
-  # Built at send time: nil (nothing sent) if the play went private meanwhile.
+  # Built at send time: nil (nothing sent, and logged) if the play went
+  # private meanwhile.
   # If the play's album is still waiting on its first cover lookup, give it
   # a little longer: a post without its cover is a post Pixelfed drops (it
   # doesn't store notes without media), and the cover is usually seconds
@@ -192,6 +194,7 @@ defmodule FinalTrack.Federation do
         Objects.create(post, post.account)
 
       _ ->
+        Logger.info("federation: post #{post_id} not sent: no longer showable")
         nil
     end
   end
