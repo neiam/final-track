@@ -197,3 +197,7 @@ and ActivityPub deliveries; covers must be on a volume all pods share.
 | `FinalTrack.Accounts` | users, invites, display names, admins |
 | `FinalTrack.Instance` | the server's name and description |
 | `FinalTrack.Release` | what `bin/migrate`, `bin/invite` run |
+
+## License
+
+[AGPL-3.0](LICENSE.md). If you run a modified Final Track for others, they are entitled to its source.
