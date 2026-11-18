@@ -1,18 +1,141 @@
-# FinalTrack
+# Final Track
 
-To start your Phoenix server:
+A self-hosted scrobble server for you and your people. Phones running
+[Scropple](https://gg.neiam.co/r/neiam/scropple-android) (or anything that
+speaks its HTTP backend's JSON) post what they play; members see charts by
+day, week, month and year, a library of every artist and album with its
+numbers, and a live wall of album art on the front page.
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+Running at **https://finaltrack.neiam.org** (deployment:
+`argo-01-bos/finaltrack`). Phoenix 1.8 / LiveView, PostgreSQL.
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+## What's in it
 
-Ready to run in production? Please [check our deployment guides](https://phoenix.hexdocs.pm/deployment.html).
+- **Scrobbling API.** `POST /api/v1/scrobble` and `/api/v1/now-playing`,
+  the same contract ircd's ScrobbleServ accepts, so one phone can feed both
+  (and Last.fm) at once. Per-device bearer tokens, made and revoked on the
+  Scrobbling page; only their hashes are stored.
+- **Charts** (`/charts`): top artists, albums and tracks for any day, week,
+  month or year, plays over time, who's listening now, latest plays.
+  Periods follow the viewer's time zone (Postgres does the zone math).
+  Everyone's, or just yours.
+- **Library** (`/artists`, `/albums`): everything that's been played, with
+  plays, listeners, tracks, first and last played. Sort, search, scroll.
+- **Landing grid** (`/`): the latest plays as album art, live. Public:
+  visitors see what was played, members also see who.
+- **Covers**: uploaded on the album page, or fetched from MusicBrainz and
+  the Cover Art Archive (automatically the first time an album is played).
+- **Private marks**: mark an artist, album or track private and your plays
+  of it are only ever shown to you — past ones included, everywhere,
+  fediverse posts too.
+- **Fediverse** (optional, off by default): a member can give their plays
+  an account (`@name@host`) that Mastodon, Pixelfed and others can follow;
+  each non-private play is posted with its cover, followers-only or public.
+  `/@name` is the profile.
+- **Accounts**: invite-only registration, email/password and magic links
+  (`phx.gen.auth`), optional OpenID Connect sign-in via
+  [`neiam_auth`](https://gg.neiam.co/neiam/neiam_auth).
 
-## Learn more
+## The scrobbling API
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://phoenix.hexdocs.pm/overview.html
-* Docs: https://phoenix.hexdocs.pm
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+```sh
+curl -X POST https://HOST/api/v1/scrobble \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '[{"artist": "Pink Floyd", "track": "Time",
+        "album": "The Dark Side of the Moon",
+        "durationSec": 413, "timestamp": 1763494445}]'
+```
+
+- Body: one object, a bare array, or `{"scrobbles": [...]}` (up to 500).
+  `artist` and `track` are required; `album`, `albumArtist`, `durationSec`
+  and `timestamp` (Unix seconds, when the play started) are optional.
+- Answers `200 {"accepted": n, "rejected": m}`; all invalid is a `422`. A
+  retried batch adds nothing: plays are unique per user, track and time.
+- `POST /api/v1/now-playing` takes one object and answers `204`.
+- Every bad or missing token is the same `401`.
+
+## Who sees what
+
+| Viewer | Sees |
+|---|---|
+| Anyone | the landing grid: what was played and when, never by whom |
+| Members | charts, library, album and artist pages, who played what |
+| Fediverse followers | a member's non-private plays, if they turned an account on |
+| You | everything you've played |
+
+Everything shared is filtered by `FinalTrack.Privacy.visible_to/2` at read
+time, which is why marking something private also hides the past.
+
+## Development
+
+```sh
+podman compose up -d        # Postgres on localhost:54330 (docker works too)
+mix setup                   # deps, database, assets
+mix phx.server              # http://localhost:4000
+mix final_track.invite      # a registration link (invite-only by default)
+```
+
+Before committing: `mix precommit` (warnings as errors, unused deps,
+format, tests). Tests use the compose Postgres too; `POSTGRES_PORT=5432`
+points them at a host Postgres instead. Outbound HTTP (MusicBrainz, other
+fediverse servers) is stubbed with `Req.Test` in tests.
+
+In dev, covers are stored under `priv/uploads/` and fetched automatically,
+so scrobbling locally makes real requests to MusicBrainz.
+
+## Running it
+
+The image is built by `.forgejo/workflows/image.yml` on every push to
+master: `ggr.neiam.co/neiam/final_track:{master,latest,sha-…}`. The release
+(`mix release`) ships these scripts in `bin/`:
+
+| Script | |
+|---|---|
+| `server` | start the app (`PHX_SERVER=true`) |
+| `migrate` | run migrations (an init container in Kubernetes) |
+| `invite [--email E] [--note N] [--days D] [--by E]` | print a single-use registration link |
+| `invite-link EMAIL` | a fresh link for an invite addressed to EMAIL |
+| `final_track rpc 'FinalTrack.Covers.retry_misses()'` | look up covers again for albums that never matched |
+
+The About page has copy-ready Podman/Docker commands for a single box.
+
+### Configuration (env, read at boot)
+
+| Variable | Default | |
+|---|---|---|
+| `PHX_HOST` | — | public host; also the domain fediverse accounts live on |
+| `SECRET_KEY_BASE` | — | required, 64+ bytes |
+| `POSTGRES_HOST`, `_PORT`, `_USER`, `_PASSWORD`, `_DB` | — | preferred (passwords with URL characters survive) |
+| `DATABASE_URL` | — | used when `POSTGRES_HOST` isn't set |
+| `PORT`, `POOL_SIZE` | `4000`, `10` | |
+| `FINAL_TRACK_COVERS_DIR` | `/var/lib/final_track/covers` | shared between replicas |
+| `FINAL_TRACK_AUTO_FETCH_COVERS` | `true` | look up a cover the first time an album is played |
+| `FINAL_TRACK_COVER_INTERVAL_MS` | `2200` | between MusicBrainz requests, per pod (its limit is ~1/s per IP) |
+| `FINAL_TRACK_MUSICBRAINZ_USER_AGENT` | `FinalTrack/0.1 (self-hosted scrobble server)` | put a URL or address to reach you in it |
+| `FINAL_TRACK_ACTIVITYPUB` | `false` | fediverse accounts; settle `PHX_HOST` first |
+| `SMTP_RELAY`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_SSL`, `SMTP_TLS`, `SMTP_AUTH` | — | mail. Optional: without a relay (and, if it needs auth, a password) mail is off — no emailed links, registration takes a password |
+| `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `noreply@PHX_HOST`, `Final Track` | |
+| `OIDC_ENABLED`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, … | off | see `neiam_auth`'s README; `OIDC_LOGIN_MODE` picks how SSO and passwords coexist |
+| `CLUSTER_NAMESPACE`, `POD_IP`, `RELEASE_COOKIE` | — | clustering in Kubernetes (below) |
+
+### Clustering
+
+With `CLUSTER_NAMESPACE` set, libcluster lists that namespace's pods
+labelled `name=finaltrack` and connects to `final_track@<pod ip>`
+(`rel/env.sh.eex`, from `POD_IP`); `RELEASE_COOKIE` must match across
+pods. PubSub then spans every replica, so a scrobble landing on one pod
+updates pages served by another. Each pod runs its own cover-lookup queue
+and ActivityPub deliveries; covers must be on a volume all pods share.
+
+## Where things are
+
+| | |
+|---|---|
+| `FinalTrack.Scrobbles` | the API's validation, recording, now playing, tokens |
+| `FinalTrack.Catalog` | artists, albums, tracks (matched on normalised names) |
+| `FinalTrack.Charts` (+ `Charts.Period`) | every count: periods, timelines, library, summaries |
+| `FinalTrack.Privacy` | private marks and the visibility rule |
+| `FinalTrack.Covers` (+ `Fetcher`, `Queue`, `Store`, `Image`) | cover upload, lookup, storage |
+| `FinalTrack.Federation` (+ `Objects`, `HTTP`, `HTTPSignature`, `Delivery`) | ActivityPub; signatures and guarded HTTP ported from angler |
+| `FinalTrack.Accounts` | users, invites, display names |
+| `FinalTrack.Release` | what `bin/migrate`, `bin/invite` run |
