@@ -86,6 +86,40 @@ defmodule FinalTrack.FederationTest do
     assert "is invalid" in errors_on(cs).visibility
   end
 
+  test "posts carry #scropple by default, in content and as a Hashtag", %{user: user} do
+    play_fixture(user)
+    assert_received {:delivered, _, %{"object" => note}, _, _, _}
+
+    assert note["content"] =~ ~s(rel="tag">#<span>scropple</span></a>)
+    assert [%{"type" => "Hashtag", "name" => "#scropple", "href" => href}] = note["tag"]
+    assert href =~ "/tags/scropple"
+  end
+
+  test "the hashtag is the account's to change or clear", %{user: user} do
+    {:ok, account} = Federation.save_account(user, %{hashtag: " #NowPlaying "})
+    assert account.hashtag == "NowPlaying"
+    play_fixture(user)
+
+    assert_received {:delivered, _, %{"object" => %{"tag" => [%{"name" => "#NowPlaying"}]}}, _, _,
+                     _}
+
+    {:ok, account} = Federation.save_account(user, %{hashtag: ""})
+    assert account.hashtag == nil
+    play_fixture(user, %{"track" => "Money"})
+    assert_received {:delivered, _, %{"object" => %{"tag" => [], "content" => content}}, _, _, _}
+    refute content =~ "hashtag"
+  end
+
+  test "hashtags follow Mastodon's rules", %{user: user} do
+    for bad <- ["two words", "no-dashes", "1234", String.duplicate("a", 31)] do
+      assert {:error, cs} = Federation.save_account(user, %{hashtag: bad}), bad
+      assert errors_on(cs).hashtag != []
+    end
+
+    assert {:ok, %{hashtag: "música_2026"}} =
+             Federation.save_account(user, %{hashtag: "música_2026"})
+  end
+
   test "no cover, no attachment", %{user: user} do
     play_fixture(user)
     assert_received {:delivered, _, %{"object" => %{"attachment" => []}}, _, _, _}

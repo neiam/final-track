@@ -112,7 +112,8 @@ defmodule FinalTrack.Federation.Objects do
       "to" => to(account),
       "cc" => cc(account),
       "sensitive" => false,
-      "content" => content(s),
+      "content" => content(s) <> hashtag_html(account),
+      "tag" => hashtag_tags(account),
       # Its own URL, unique per post: Pixelfed treats posts sharing a url as
       # one and drops the rest. A browser following it lands on the profile.
       "url" => url,
@@ -129,6 +130,21 @@ defmodule FinalTrack.Federation.Objects do
 
     "<p>🎵 #{track}#{album}</p>"
   end
+
+  # The account's hashtag, as Mastodon writes one: a link in the content and
+  # a Hashtag in `tag` (what servers index and tag-followers receive).
+  defp hashtag_html(%Account{hashtag: tag}) when is_binary(tag) and tag != "" do
+    ~s(<p><a href="#{tag_url(tag)}" class="mention hashtag" rel="tag">#<span>#{escape(tag)}</span></a></p>)
+  end
+
+  defp hashtag_html(_account), do: ""
+
+  defp hashtag_tags(%Account{hashtag: tag}) when is_binary(tag) and tag != "",
+    do: [%{"type" => "Hashtag", "href" => tag_url(tag), "name" => "#" <> tag}]
+
+  defp hashtag_tags(_account), do: []
+
+  defp tag_url(tag), do: base() <> "/tags/" <> URI.encode(String.downcase(tag))
 
   defp cover_attachment(nil, _track), do: []
 

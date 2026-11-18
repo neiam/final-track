@@ -30,8 +30,9 @@ Running at **https://finaltrack.neiam.org** (deployment:
   fediverse posts too.
 - **Fediverse** (optional, off by default): a member can give their plays
   an account (`@name@host`) that Mastodon, Pixelfed and others can follow;
-  each non-private play is posted with its cover, followers-only or public.
-  `/@name` is the profile.
+  each non-private play is posted with its cover, followers-only or public,
+  tagged `#scropple` by default (changeable, or off) so people who'd rather
+  not see a post per play can filter the tag. `/@name` is the profile.
 - **Accounts**: invite-only registration, email/password and magic links
   (`phx.gen.auth`), optional OpenID Connect sign-in via
   [`neiam_auth`](https://gg.neiam.co/neiam/neiam_auth).

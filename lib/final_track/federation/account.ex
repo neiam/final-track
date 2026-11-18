@@ -27,6 +27,8 @@ defmodule FinalTrack.Federation.Account do
     field :enabled, :boolean, default: false
     # "unlisted" or "public": see `visibilities/0`.
     field :visibility, :string, default: "unlisted"
+    # Added to every post, without the "#"; nil for none.
+    field :hashtag, :string, default: "scropple"
     field :public_key_pem, :string
     field :private_key_pem, :string, redact: true
 
@@ -44,8 +46,17 @@ defmodule FinalTrack.Federation.Account do
   @doc "The same checks without making keys: for a form as it's typed into."
   def validation_changeset(account, attrs) do
     account
-    |> cast(attrs, [:username, :enabled, :visibility])
+    # No empty_values: Ecto would turn a cleared hashtag ("") into the
+    # field's default ("scropple"), so it could never be switched off.
+    # normalize_hashtag/1 makes "" nil instead.
+    |> cast(attrs, [:username, :enabled, :visibility, :hashtag], empty_values: [])
     |> validate_inclusion(:visibility, Map.keys(@visibilities))
+    |> update_change(:hashtag, &normalize_hashtag/1)
+    |> validate_length(:hashtag, max: 30)
+    # Mastodon's rule: letters, digits and underscores, not only digits.
+    |> validate_format(:hashtag, ~r/^[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_]*$/u,
+      message: "letters, numbers and underscores, not only numbers"
+    )
     |> update_change(
       :username,
       &(&1 |> String.trim() |> String.trim_leading("@") |> String.downcase())
@@ -58,6 +69,16 @@ defmodule FinalTrack.Federation.Account do
     |> validate_exclusion(:username, @reserved, message: "is reserved")
     |> unsafe_validate_unique(:username, FinalTrack.Repo)
     |> unique_constraint(:username)
+  end
+
+  # "#Scropple " -> "Scropple"; "" or "#" -> nil (no hashtag).
+  defp normalize_hashtag(nil), do: nil
+
+  defp normalize_hashtag(tag) do
+    case tag |> String.trim() |> String.trim_leading("#") do
+      "" -> nil
+      tag -> tag
+    end
   end
 
   defp put_keys(%{data: %{private_key_pem: pem}} = changeset) when is_binary(pem), do: changeset

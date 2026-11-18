@@ -321,6 +321,21 @@ defmodule FinalTrackWeb.UserLive.Scrobbling do
               angler then don't show the posts on your profile page. Public shows them everywhere.
               Changing it applies to new posts.
             </p>
+            <div class="sm:w-1/2">
+              <.input
+                field={@fediverse_form[:hashtag]}
+                type="text"
+                label="Hashtag"
+                placeholder="none"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="-mt-1 text-xs text-base-content/60">
+                Added to every post<span :if={@fediverse_form[:hashtag].value not in [nil, ""]}>
+                  as <span class="font-mono">#{String.trim_leading(to_string(@fediverse_form[:hashtag].value), "#")}</span></span>, so anyone who'd rather not see a post per play can filter or mute the tag
+                instead of unfollowing. Leave it empty for none.
+              </p>
+            </div>
             <div class="flex items-center justify-between gap-3">
               <.input field={@fediverse_form[:enabled]} type="checkbox" label="Post my plays" />
               <button

@@ -28,6 +28,11 @@ defmodule FinalTrackWeb.UserLive.FediverseSettingsTest do
     assert %{visibility: "public"} = Federation.get_account(user)
     assert has_element?(lv, "#fediverse-visibility", "public")
 
+    # #scropple by default; changeable.
+    assert %{hashtag: "scropple"} = Federation.get_account(user)
+    lv |> form("#fediverse-form", fediverse: %{hashtag: "#nowplaying"}) |> render_submit()
+    assert %{hashtag: "nowplaying"} = Federation.get_account(user)
+
     lv |> form("#fediverse-form", fediverse: %{enabled: "false"}) |> render_submit()
     assert %{enabled: false} = Federation.get_account(user)
     assert has_element?(lv, "#fediverse-status", "off")
