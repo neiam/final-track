@@ -121,7 +121,8 @@ defmodule FinalTrack.Scrobbles do
   # YouTube Music". When the last "•" segment is a known service, drop it;
   # what's left is the artist, then the album (kept unless one was sent).
   @services ~w(youtubemusic)
-  defp untangle_artist(artist, album) do
+  @doc false
+  def untangle_artist(artist, album) do
     parts = artist |> String.split(~r/\s+[•·]\s+/u) |> Enum.map(&String.trim/1)
 
     with [_, _ | _] <- parts,

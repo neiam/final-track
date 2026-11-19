@@ -5,6 +5,8 @@ defmodule FinalTrack.Release do
       bin/migrate                     # FinalTrack.Release.migrate/0
       bin/invite [--email sam@example.com] [--note "for Sam"] [--days 7] [--by you@example.com]
       bin/invite-link sam@example.com
+      bin/admin [--revoke] you@example.com
+      bin/repair-artists [--apply]    # FinalTrack.Catalog.Repair
       bin/final_track eval 'FinalTrack.Release.rollback(FinalTrack.Repo, 20261118195445)'
 
   In dev, the same invites are `mix final_track.invite` and
@@ -130,6 +132,24 @@ defmodule FinalTrack.Release do
         IO.puts(:stderr, "No user with email #{email}")
         System.halt(1)
     end
+  end
+
+  @doc """
+  Lists artists recorded under a player's subtitle ("Artist • Album •
+  YouTube Music") and, with REPAIR_APPLY=true, moves their plays onto the
+  real artist (`FinalTrack.Catalog.Repair`).
+  """
+  def repair_artists(apply? \\ nil) do
+    load_app()
+    apply? = if is_nil(apply?), do: env("REPAIR_APPLY") == "true", else: apply?
+
+    {:ok, lines, _apps} =
+      Ecto.Migrator.with_repo(FinalTrack.Repo, fn _repo ->
+        FinalTrack.Catalog.Repair.run(apply: apply?)
+      end)
+
+    Enum.each(lines, &IO.puts/1)
+    unless apply?, do: IO.puts("(dry run: --apply to repair)")
   end
 
   defp env(name) do

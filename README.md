@@ -140,6 +140,7 @@ as repo secrets; GHCR uses the workflow's own token. The release
 | `invite [--email E] [--note N] [--days D] [--by E]` | print a single-use registration link |
 | `invite-link EMAIL` | a fresh link for an invite addressed to EMAIL |
 | `admin [--revoke] EMAIL` | make an account an admin (or not) |
+| `repair-artists [--apply]` | move plays recorded under a player's subtitle as the artist ("Artist • Album • YouTube Music", before that was untangled on arrival) onto the real artist and album; a dry run without `--apply` |
 | `final_track rpc 'FinalTrack.Covers.retry_misses()'` | look up covers again for albums that never matched |
 
 The About page has copy-ready Podman/Docker commands for a single box.
