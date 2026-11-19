@@ -22,27 +22,40 @@ ARG DEBIAN_VERSION=bookworm-20261027-slim
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
-FROM ${BUILDER_IMAGE} as builder
+FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies. No Node: tailwind + esbuild are installed via
 # mix. git: heroicons, daisyUI and neiam_auth are git deps.
-RUN apt-get update -y \
-    && apt-get install -y build-essential git ca-certificates \
+#
+# Every network step below is retried with backoff (as angler's): the
+# GitHub runners' routes to the Debian mirrors and to hex.pm are flaky —
+# one run failed `apt-get update` (exit 100), the next timed out fetching
+# rebar3 from builds.hex.pm right after installing hex from the same host.
+RUN n=0; until apt-get update -y -o Acquire::Retries=3 \
+      && apt-get install -y -o Acquire::Retries=3 build-essential git ca-certificates; do \
+      n=$((n + 1)); [ "$n" -ge 5 ] && exit 1; \
+      echo "apt failed; retry $n/4 in $((n * 10))s"; sleep $((n * 10)); \
+    done \
     && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # prepare build dir
 WORKDIR /app
 
 # install hex + rebar
-RUN mix local.hex --force && \
-    mix local.rebar --force
+RUN n=0; until mix local.hex --force && mix local.rebar --force; do \
+      n=$((n + 1)); [ "$n" -ge 5 ] && exit 1; \
+      echo "hex/rebar install failed; retry $n/4 in $((n * 10))s"; sleep $((n * 10)); \
+    done
 
 # set build ENV
 ENV MIX_ENV="prod"
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
-RUN mix deps.get --only $MIX_ENV
+RUN n=0; until mix deps.get --only $MIX_ENV; do \
+      n=$((n + 1)); [ "$n" -ge 5 ] && exit 1; \
+      echo "deps.get failed; retry $n/4 in $((n * 10))s"; sleep $((n * 10)); \
+    done
 RUN mkdir config
 
 # copy compile-time config files before we compile dependencies
@@ -61,7 +74,11 @@ COPY assets assets
 # imported from js/app.js) exist on disk by the time esbuild runs.
 RUN mix compile
 
-RUN mix assets.deploy
+# Downloads the tailwind and esbuild binaries on first run: retried too.
+RUN n=0; until mix assets.deploy; do \
+      n=$((n + 1)); [ "$n" -ge 5 ] && exit 1; \
+      echo "assets.deploy failed; retry $n/4 in $((n * 10))s"; sleep $((n * 10)); \
+    done
 
 # Changes to config/runtime.exs don't require recompiling the code
 COPY config/runtime.exs config/
@@ -78,8 +95,11 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
 
-RUN apt-get update -y && \
-  apt-get install -y libstdc++6 openssl libncurses6 locales ca-certificates tini \
+RUN n=0; until apt-get update -y -o Acquire::Retries=3 \
+      && apt-get install -y -o Acquire::Retries=3 libstdc++6 openssl libncurses6 locales ca-certificates tini; do \
+      n=$((n + 1)); [ "$n" -ge 5 ] && exit 1; \
+      echo "apt failed; retry $n/4 in $((n * 10))s"; sleep $((n * 10)); \
+    done \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
