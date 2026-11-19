@@ -100,6 +100,8 @@ defmodule FinalTrack.Scrobbles do
          {:ok, track} <- text(params, "track", true),
          {:ok, album} <- text(params, "album", false),
          {:ok, album_artist} <- text(params, "albumArtist", false) do
+      {artist, album} = untangle_artist(artist, album)
+
       {:ok,
        %{
          artist: artist,
@@ -113,6 +115,26 @@ defmodule FinalTrack.Scrobbles do
   end
 
   def validate_play(_), do: {:error, "body must be a JSON object"}
+
+  # Some players hand media sessions a subtitle rather than an artist: Sonos
+  # casting YouTube Music sends "Cage The Elephant • Tell Me I'm Pretty •
+  # YouTube Music". When the last "•" segment is a known service, drop it;
+  # what's left is the artist, then the album (kept unless one was sent).
+  @services ~w(youtubemusic)
+  defp untangle_artist(artist, album) do
+    parts = artist |> String.split(~r/\s+[•·]\s+/u) |> Enum.map(&String.trim/1)
+
+    with [_, _ | _] <- parts,
+         service = List.last(parts),
+         true <- (service |> String.downcase() |> String.replace(~r/\s+/u, "")) in @services do
+      case Enum.drop(parts, -1) do
+        [name] -> {name, album}
+        [name, from_album | _] -> {name, album || from_album}
+      end
+    else
+      _ -> {artist, album}
+    end
+  end
 
   defp text(params, key, required?) do
     case Map.get(params, key) do

@@ -8,6 +8,24 @@ defmodule FinalTrack.ScrobblesTest do
   alias FinalTrack.Scrobbles.{NowPlaying, Scrobble}
 
   describe "validate_play/1" do
+    test "untangles a YouTube Music subtitle sent as the artist" do
+      artist = "Cage The Elephant • Tell Me I'm Pretty • YouTube Music"
+
+      assert {:ok, %{artist: "Cage The Elephant", album: "Tell Me I'm Pretty"}} =
+               Scrobbles.validate_play(%{"artist" => artist, "track" => "Cry Baby"})
+
+      # An album the client sent wins; no album segment leaves it alone.
+      assert {:ok, %{artist: "Cage The Elephant", album: "Sent"}} =
+               Scrobbles.validate_play(%{"artist" => artist, "track" => "t", "album" => "Sent"})
+
+      assert {:ok, %{artist: "Justice", album: nil}} =
+               Scrobbles.validate_play(%{"artist" => "Justice • YouTube Music", "track" => "t"})
+
+      # A "•" without a known service is left as sent.
+      assert {:ok, %{artist: "A • B"}} =
+               Scrobbles.validate_play(%{"artist" => "A • B", "track" => "t"})
+    end
+
     test "picks out and cleans the fields" do
       assert {:ok, play} =
                Scrobbles.validate_play(%{
