@@ -91,6 +91,8 @@ defmodule FinalTrack.FederationTest do
     assert_received {:delivered, _, %{"object" => note}, _, _, _}
 
     assert note["content"] =~ ~s(rel="tag">#<span>scropple</span></a>)
+    # Three spaces between the title and the tags, for servers that strip the HTML.
+    assert note["content"] =~ "</p>   <p><a"
     assert [%{"type" => "Hashtag", "name" => "#scropple", "href" => href}] = note["tag"]
     assert href =~ "/tags/scropple"
   end

@@ -136,13 +136,16 @@ defmodule FinalTrack.Federation.Objects do
   # tag-followers). The account's own tag, then (if it asks) the artist's.
   defp hashtag_html(tags) when tags == [], do: ""
 
+  # Three spaces before the tags' paragraph: invisible where the HTML is
+  # rendered (Mastodon), but where it's stripped to text (Pixelfed) the
+  # title and the tags would otherwise run together.
   defp hashtag_html(tags) do
     links =
       Enum.map_join(tags, " ", fn tag ->
         ~s(<a href="#{tag_url(tag)}" class="mention hashtag" rel="tag">#<span>#{escape(tag)}</span></a>)
       end)
 
-    "<p>" <> links <> "</p>"
+    "   <p>" <> links <> "</p>"
   end
 
   defp hashtag_tags(tags),
